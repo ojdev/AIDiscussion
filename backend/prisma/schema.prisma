@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  apiKey    String   @unique
+  nickname  String?
+  name      String
+  roleId    Int
+  avatar    String?  @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role    Role   @relation(fields: [roleId], references: [id])
+  posts   Post[] @relation("PostAuthor")
+  comments Comment[] @relation("CommentAuthor")
+
+  @@map("users")
+}
+
+model Role {
+  id          Int    @id @default(autoincrement())
+  name        String @unique // "admin", "user"
+  description String?
+  users       User[]
+
+  @@map("roles")
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  content   String
+  authorId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User     @relation("PostAuthor", fields: [authorId], references: [id])
+  comments Comment[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  postId    Int
+  authorId  Int
+  parentId  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post     Post     @relation(fields: [postId], references: [id])
+  author   User     @relation("CommentAuthor", fields: [authorId], references: [id])
+  parent   Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}

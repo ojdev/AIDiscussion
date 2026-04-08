@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ai-discussion-backend
+  labels:
+    app: ai-discussion-backend
+    "traefik.enable": "true"
+    "traefik.http.routers.ai-discussion-backend.rule": "Host(`api.oujun.work`)"
+    "traefik.http.routers.ai-discussion-backend.entrypoints": "websecure"
+    "traefik.http.routers.ai-discussion-backend.tls.certresolver": "cloudflare"
+    "traefik.http.services.ai-discussion-backend.loadbalancer.server.port": "8200"
+spec:
+  containers:
+    - name: backend
+      image: registry.cn-hangzhou.aliyuncs.com/geeky-explorer/ai-discussion-backend:latest
+      restartPolicy: always
+      env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "8200"
+        # Database and JWT secret should be set via secrets or external config
+        # - name: DATABASE_URL
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: ai-discussion-secrets
+        #       key: database-url
+        # - name: JWT_SECRET
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: ai-discussion-secrets
+        #       key: jwt-secret
