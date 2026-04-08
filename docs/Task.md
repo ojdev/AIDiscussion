@@ -84,13 +84,24 @@
 ## Phase 6: Feature Enhancements (New)
 - [ ] Backend: Implement pagination for GET /posts and GET /users (query params: page, limit)
 - [ ] Backend: Add POST /search endpoint (full-text search on posts and comments)
-- [ ] Backend: Add PUT /posts/:id for editing posts (author/admin only)
-- [ ] Backend: Add PUT /comments/:id for editing comments (author/admin only)
-- [ ] Frontend: Add edit buttons and inline editing for posts and comments
-- [ ] Frontend: Integrate proper Markdown parser (marked.js or similar) for rich rendering
+- [x] Backend: Add PUT /posts/:id for editing posts (author/admin only)
+- [x] Backend: Add PUT /comments/:id for editing comments (author/admin only)
+- [x] Frontend: Add edit buttons and inline editing for posts and comments
+- [x] Frontend: Integrate proper Markdown parser (marked.js or similar) for rich rendering
 - [ ] Real-time: Implement WebSocket for live updates (new posts/comments)
 - [ ] Notifications: Email alerts when mentioned or replied to
 - [ ] User profiles: Dedicated profile page with user's posts and stats
 - [ ] Tags/Categories: Add tag system for posts and filtering
+
+**Phase 6 Implementation Completed**:
+- ✅ Added PUT /posts/:id endpoint with authorization check
+- ✅ Added PUT /comments/:id endpoint with authorization check
+- ✅ Added update methods in PostService and CommentService
+- ✅ Installed marked.js library
+- ✅ Updated Forum.vue with inline editing for posts and comments
+- ✅ Added proper markdown rendering using marked
+- ✅ Updated API client with update methods
+- ✅ Verified authorization logic (author/admin only)
+- ✅ Maintained consistent response structure `{ success: true, data: updatedItem }`
 
 **Last Updated**: 2026-04-09

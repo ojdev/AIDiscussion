@@ -36,13 +36,45 @@
             </div>
           </template>
 
-          <div class="post-content" v-html="renderMarkdown(post.content)"></div>
+          <!-- 编辑模式 -->
+          <div v-if="editingPostId === post.id">
+            <n-input
+              v-model:value="editingPostContent"
+              type="textarea"
+              placeholder="请输入讨论内容"
+              :autosize="{ minRows: 3, maxRows: 6 }"
+            />
+            <div style="margin-top: 8px; display: flex; gap: 8px;">
+              <n-button type="primary" size="small" :loading="savingPostId === post.id" @click="handleSavePost(post.id)">
+                保存
+              </n-button>
+              <n-button size="small" @click="cancelEditPost">
+                取消
+              </n-button>
+            </div>
+          </div>
+
+          <!-- 显示模式 -->
+          <div v-else>
+            <div class="post-content" v-html="renderMarkdown(post.content)"></div>
+          </div>
 
           <template #footer>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <n-button text type="primary" @click="toggleComments(post.id)">
                 查看回复 ({{ post._count?.comments || 0 }})
               </n-button>
+
+              <div v-if="canEditPost(post)">
+                <n-button
+                  v-if="editingPostId !== post.id"
+                  text
+                  type="primary"
+                  @click="startEditPost(post.id, post.content)"
+                >
+                  编辑
+                </n-button>
+              </div>
 
               <n-button
                 v-if="canDeletePost(post)"
@@ -71,18 +103,49 @@
                       {{ formatDate(comment.createdAt) }}
                     </n-text>
                   </div>
-                  <div class="comment-content" v-html="renderMarkdown(comment.content)"></div>
 
-                  <n-button
-                    v-if="canDeleteComment(comment)"
-                    type="error"
-                    text
-                    size="tiny"
-                    style="margin-top: 4px;"
-                    @click="handleDeleteComment(comment.id)"
-                  >
-                    删除
-                  </n-button>
+                  <!-- 评论编辑模式 -->
+                  <div v-if="editingCommentId === comment.id">
+                    <n-input
+                      v-model:value="editingCommentContent"
+                      type="textarea"
+                      :autosize="{ minRows: 2, maxRows: 4 }"
+                    />
+                    <div style="margin-top: 8px; display: flex; gap: 8px;">
+                      <n-button type="primary" size="tiny" :loading="savingCommentId === comment.id" @click="handleSaveComment(comment.id, comment.postId)">
+                        保存
+                      </n-button>
+                      <n-button size="tiny" @click="cancelEditComment">
+                        取消
+                      </n-button>
+                    </div>
+                  </div>
+
+                  <!-- 评论显示模式 -->
+                  <div v-else-if="!editingCommentId || editingCommentId !== comment.id">
+                    <div class="comment-content" v-html="renderMarkdown(comment.content)"></div>
+
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                      <n-button
+                        v-if="canEditComment(comment)"
+                        text
+                        type="primary"
+                        size="tiny"
+                        @click="startEditComment(comment.id, comment.content)"
+                      >
+                        编辑
+                      </n-button>
+                      <n-button
+                        v-if="canDeleteComment(comment)"
+                        type="error"
+                        text
+                        size="tiny"
+                        @click="handleDeleteComment(comment.id)"
+                      >
+                        删除
+                      </n-button>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- 添加回复 -->
@@ -120,8 +183,12 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useUserStore } from '@/store/user'
+import { useMessage } from 'naive-ui'
 import { postsApi, commentsApi } from '@/api'
+import { marked } from 'marked'
 import type { FormInst } from 'naive-ui'
+
+const message = useMessage()
 
 interface Post {
   id: number
@@ -149,6 +216,7 @@ interface Comment {
     role: string
     avatar?: string
   }
+  postId: number
 }
 
 const userStore = useUserStore()
@@ -162,6 +230,15 @@ const expandedPostId = ref<number | null>(null)
 const commentsMap = ref<Record<number, Comment[]>>({})
 const newComments = ref<Record<number, string>>({})
 const commenting = ref<Record<number, boolean>>({})
+
+// Editing states
+const editingPostId = ref<number | null>(null)
+const editingPostContent = ref('')
+const savingPostId = ref<number | null>(null)
+
+const editingCommentId = ref<number | null>(null)
+const editingCommentContent = ref('')
+const savingCommentId = ref<number | null>(null)
 
 const newPost = reactive({
   content: ''
@@ -179,7 +256,15 @@ const canDeletePost = (post: Post) => {
   return currentUser.value?.role === 'admin' || post.author.id === currentUser.value?.id
 }
 
+const canEditPost = (post: Post) => {
+  return currentUser.value?.role === 'admin' || post.author.id === currentUser.value?.id
+}
+
 const canDeleteComment = (comment: Comment) => {
+  return currentUser.value?.role === 'admin' || comment.author.id === currentUser.value?.id
+}
+
+const canEditComment = (comment: Comment) => {
   return currentUser.value?.role === 'admin' || comment.author.id === currentUser.value?.id
 }
 
@@ -188,18 +273,14 @@ function formatDate(dateStr: string) {
 }
 
 function renderMarkdown(text: string) {
-  // 简单处理，实际应用可以使用 marked.js
-  return text
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+  return marked(text)
 }
 
 async function loadPosts() {
   try {
     loading.value = true
     const res = await postsApi.getAll()
-    if (res.success) {
+    if (res.success && res.data) {
       posts.value = res.data
     }
   } catch (error) {
@@ -218,11 +299,74 @@ async function handlePublish() {
     if (res.success) {
       newPost.content = ''
       await loadPosts()
+    } else {
+      message.error(res.error || '发布失败')
     }
   } catch (error: any) {
     console.error('Failed to publish:', error)
   } finally {
     publishing.value = false
+  }
+}
+
+// 帖子编辑功能
+function startEditPost(postId: number, content: string) {
+  editingPostId.value = postId
+  editingPostContent.value = content
+}
+
+function cancelEditPost() {
+  editingPostId.value = null
+  editingPostContent.value = ''
+}
+
+async function handleSavePost(postId: number) {
+  if (!editingPostContent.value.trim()) {
+    return
+  }
+
+  savingPostId.value = postId
+  try {
+    const res = await postsApi.update(postId, editingPostContent.value)
+    if (res.success) {
+      await loadPosts()
+      cancelEditPost()
+    }
+  } catch (error) {
+    console.error('Failed to update post:', error)
+  } finally {
+    savingPostId.value = null
+  }
+}
+
+// 评论编辑功能
+function startEditComment(commentId: number, content: string) {
+  editingCommentId.value = commentId
+  editingCommentContent.value = content
+}
+
+function cancelEditComment() {
+  editingCommentId.value = null
+  editingCommentContent.value = ''
+}
+
+async function handleSaveComment(commentId: number, postId: number) {
+  if (!editingCommentContent.value.trim()) {
+    return
+  }
+
+  savingCommentId.value = commentId
+  try {
+    const res = await commentsApi.update(commentId, editingCommentContent.value)
+    if (res.success) {
+      await loadComments(postId)
+      await loadPosts()
+      cancelEditComment()
+    }
+  } catch (error) {
+    console.error('Failed to update comment:', error)
+  } finally {
+    savingCommentId.value = null
   }
 }
 
@@ -238,7 +382,7 @@ async function toggleComments(postId: number) {
 async function loadComments(postId: number) {
   try {
     const res = await commentsApi.getByPostId(postId)
-    if (res.success) {
+    if (res.success && res.data) {
       commentsMap.value[postId] = res.data
     }
   } catch (error) {
@@ -257,6 +401,8 @@ async function handleAddComment(postId: number) {
       newComments.value[postId] = ''
       await loadComments(postId)
       await loadPosts() // 更新评论计数
+    } else {
+      message.error(res.error || '回复失败')
     }
   } catch (error) {
     console.error('Failed to add comment:', error)
@@ -269,8 +415,8 @@ async function handleDeletePost(postId: number) {
   try {
     await postsApi.delete(postId)
     await loadPosts()
-  } catch (error) {
-    console.error('Failed to delete post:', error)
+  } catch (error: any) {
+    message.error(error?.error || '删除失败')
   }
 }
 
@@ -282,8 +428,8 @@ async function handleDeleteComment(commentId: number) {
       await loadComments(currentPostId)
       await loadPosts()
     }
-  } catch (error) {
-    console.error('Failed to delete comment:', error)
+  } catch (error: any) {
+    message.error(error?.error || '删除失败')
   }
 }
 

@@ -51,4 +51,16 @@ export class CommentService {
       },
     })
   }
+
+  async updateComment(id: number, content: string) {
+    return await prisma.comment.update({
+      where: { id },
+      data: { content },
+      include: {
+        author: {
+          include: { role: true },
+        },
+      },
+    })
+  }
 }

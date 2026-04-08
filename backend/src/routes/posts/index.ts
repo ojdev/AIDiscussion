@@ -94,4 +94,42 @@ export default async function postsRouter(fastify: FastifyInstance) {
       }
     }
   )
+
+  // PUT /posts/:id - 编辑帖子（管理员或作者）
+  fastify.put(
+    '/:id',
+    {
+      onRequest: verifyToken,
+      schema: {
+        body: {
+          type: 'object',
+          required: ['content'],
+          properties: {
+            content: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (req: any, reply: any) => {
+      try {
+        const id = parseInt(req.params.id as string, 10)
+        const post = await postService.getPostById(id)
+        if (!post) {
+          return reply.code(404).send({ success: false, error: 'Post not found' })
+        }
+
+        const isAdmin = req.user?.role === 'admin'
+        const isAuthor = post.authorId === req.user?.userId
+
+        if (!isAdmin && !isAuthor) {
+          return reply.code(403).send({ success: false, error: 'Forbidden' })
+        }
+
+        const updatedPost = await postService.updatePost(id, req.body.content)
+        return { success: true, data: updatedPost }
+      } catch (error: any) {
+        return reply.code(500).send({ success: false, error: error.message })
+      }
+    }
+  )
 }

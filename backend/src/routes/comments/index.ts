@@ -79,4 +79,42 @@ export default async function commentsRouter(fastify: FastifyInstance) {
       }
     }
   )
+
+  // PUT /comments/:id - 编辑评论（管理员或作者）
+  fastify.put(
+    '/:id',
+    {
+      onRequest: verifyToken,
+      schema: {
+        body: {
+          type: 'object',
+          required: ['content'],
+          properties: {
+            content: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (req: any, reply: any) => {
+      try {
+        const id = parseInt(req.params.id as string, 10)
+        const comment = await commentService.getCommentById(id)
+        if (!comment) {
+          return reply.code(404).send({ success: false, error: 'Comment not found' })
+        }
+
+        const isAdmin = req.user?.role === 'admin'
+        const isAuthor = comment.authorId === req.user?.userId
+
+        if (!isAdmin && !isAuthor) {
+          return reply.code(403).send({ success: false, error: 'Forbidden' })
+        }
+
+        const updatedComment = await commentService.updateComment(id, req.body.content)
+        return { success: true, data: updatedComment }
+      } catch (error: any) {
+        return reply.code(500).send({ success: false, error: error.message })
+      }
+    }
+  )
 }

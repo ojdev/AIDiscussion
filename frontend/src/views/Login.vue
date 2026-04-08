@@ -45,7 +45,7 @@ async function handleLogin() {
 
     const res = await authApi.login(formData.value.apiKey)
 
-    if (res.success) {
+    if (res.success && res.data) {
       userStore.setUser(res.data.user, res.data.token)
       message.success('登录成功')
       router.push('/forum')

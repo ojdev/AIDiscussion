@@ -1,9 +1,9 @@
-import axios from 'axios'
+import axios, { AxiosInstance } from 'axios'
 import { useUserStore } from '@/store/user'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.oujun.work'
 
-const api = axios.create({
+const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
@@ -65,18 +65,23 @@ export interface ApiResponse<T = any> {
   error?: string
 }
 
+// Helper function to cast responses to unwrapped type
+function unwrap<T>(promise: Promise<any>): Promise<ApiResponse<T>> {
+  return promise as Promise<ApiResponse<T>>
+}
+
 export const authApi = {
   login(apiKey: string) {
-    return api.post<LoginResponse>('/auth/login', { apiKey })
+    return unwrap<LoginResponse['data']>(api.post('/auth/login', { apiKey }))
   }
 }
 
 export const usersApi = {
   getAll() {
-    return api.get<ApiResponse<any[]>>('/users')
+    return unwrap<any[]>(api.get('/users'))
   },
   getById(id: number) {
-    return api.get<ApiResponse<any>>(`/users/${id}`)
+    return unwrap<any>(api.get(`/users/${id}`))
   },
   create(data: {
     apiKey: string
@@ -85,40 +90,46 @@ export const usersApi = {
     roleId: number
     avatar?: string
   }) {
-    return api.post<ApiResponse<any>>('/users', data)
+    return unwrap<any>(api.post('/users', data))
   },
   update(id: number, data: any) {
-    return api.put<ApiResponse<any>>(`/users/${id}`, data)
+    return unwrap<any>(api.put(`/users/${id}`, data))
   },
   delete(id: number) {
-    return api.delete<ApiResponse<any>>(`/users/${id}`)
+    return unwrap<any>(api.delete(`/users/${id}`))
   }
 }
 
 export const postsApi = {
   getAll() {
-    return api.get<ApiResponse<any[]>>('/posts')
+    return unwrap<any[]>(api.get('/posts'))
   },
   getById(id: number) {
-    return api.get<ApiResponse<any>>(`/posts/${id}`)
+    return unwrap<any>(api.get(`/posts/${id}`))
   },
   create(content: string) {
-    return api.post<ApiResponse<any>>('/posts', { content })
+    return unwrap<any>(api.post('/posts', { content }))
   },
   delete(id: number) {
-    return api.delete<ApiResponse<any>>(`/posts/${id}`)
+    return unwrap<any>(api.delete(`/posts/${id}`))
+  },
+  update(id: number, content: string) {
+    return unwrap<any>(api.put(`/posts/${id}`, { content }))
   }
 }
 
 export const commentsApi = {
   getByPostId(postId: number) {
-    return api.get<ApiResponse<any[]>>(`/posts/${postId}/comments`)
+    return unwrap<any[]>(api.get(`/posts/${postId}/comments`))
   },
   create(postId: number, content: string, parentId?: number) {
-    return api.post<ApiResponse<any>>(`/posts/${postId}/comments`, { content, parentId })
+    return unwrap<any>(api.post(`/posts/${postId}/comments`, { content, parentId }))
   },
   delete(id: number) {
-    return api.delete<ApiResponse<any>>(`/comments/${id}`)
+    return unwrap<any>(api.delete(`/comments/${id}`))
+  },
+  update(id: number, content: string) {
+    return unwrap<any>(api.put(`/comments/${id}`, { content }))
   }
 }
 

@@ -59,4 +59,16 @@ export class PostService {
       where: { id },
     })
   }
+
+  async updatePost(id: number, content: string) {
+    return await prisma.post.update({
+      where: { id },
+      data: { content },
+      include: {
+        author: {
+          include: { role: true },
+        },
+      },
+    })
+  }
 }

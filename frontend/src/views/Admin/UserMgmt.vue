@@ -177,8 +177,10 @@ async function loadUsers() {
   try {
     loading.value = true
     const res = await usersApi.getAll()
-    if (res.success) {
+    if (res.success && res.data) {
       users.value = res.data
+    } else {
+      message.error(res.error || '加载用户列表失败')
     }
   } catch (error) {
     message.error('加载用户列表失败')
