@@ -89,6 +89,12 @@ export const usersApi = {
   getById(id: number) {
     return unwrap<any>(api.get(`/users/${id}`))
   },
+  getMe() {
+    return unwrap<any>(api.get('/users/me'))
+  },
+  updateMe(data: { nickname?: string; avatar?: string }) {
+    return unwrap<any>(api.put('/users/me', data))
+  },
   create(data: {
     apiKey: string
     name: string

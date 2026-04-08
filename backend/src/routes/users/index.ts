@@ -21,17 +21,65 @@ export default async function usersRouter(fastify: FastifyInstance) {
     }
   )
 
-  // GET /users/:id - 获取单个用户
+  // GET /users/:id - 获取单个用户（包含统计信息）
   fastify.get(
     '/:id',
     { onRequest: verifyToken },
     async (req: any, reply: any) => {
       try {
         const id = parseInt(req.params.id as string, 10)
-        const user = await userService.getUserById(id)
-        if (!user) {
+        // Use getProfile to include stats and exclude sensitive data
+        const user = await userService.getProfile(id)
+        return { success: true, data: user }
+      } catch (error: any) {
+        if (error.message === 'User not found') {
           return reply.code(404).send({ success: false, error: 'User not found' })
         }
+        return reply.code(500).send({ success: false, error: error.message })
+      }
+    }
+  )
+
+  // GET /users/me - 获取当前用户信息（包含统计信息）
+  fastify.get(
+    '/me',
+    { onRequest: verifyToken },
+    async (req: any, reply: any) => {
+      try {
+        const userId = req.user?.userId
+        if (!userId) {
+          return reply.code(401).send({ success: false, error: 'Unauthorized' })
+        }
+        const user = await userService.getMe(userId)
+        return { success: true, data: user }
+      } catch (error: any) {
+        return reply.code(500).send({ success: false, error: error.message })
+      }
+    }
+  )
+
+  // PUT /users/me - 更新当前用户信息（仅昵称和头像）
+  fastify.put(
+    '/me',
+    {
+      onRequest: verifyToken,
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            nickname: { type: 'string' },
+            avatar: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (req: any, reply: any) => {
+      try {
+        const userId = req.user?.userId
+        if (!userId) {
+          return reply.code(401).send({ success: false, error: 'Unauthorized' })
+        }
+        const user = await userService.updateMe(userId, req.body)
         return { success: true, data: user }
       } catch (error: any) {
         return reply.code(500).send({ success: false, error: error.message })

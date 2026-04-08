@@ -100,4 +100,21 @@
 - Search supports type filter (post/comment/all) and paginates independently
 - Code builds successfully for both backend and frontend
 
+## Phase 7: User Profiles ✅ COMPLETED
+- ✅ Backend: GET /users/me - return current user with stats (postCount, commentCount)
+- ✅ Backend: PUT /users/me - update nickname and avatar for current self
+- ✅ Backend: GET /users/:id - enhanced to include stats via getProfile()
+- ✅ Frontend: Created Profile.vue with tabs (My Profile / Public Profile)
+- ✅ Frontend: Route /profile (protected) and link in user menu
+- ✅ Frontend: Display user stats (posts, comments, join date)
+- ✅ Frontend: Edit form for nickname and avatar with validation
+- ✅ API client: added getMe() and updateMe()
+- ✅ Task.md updated
+
+**Implementation Notes**:
+- Profile page accessible at /profile (authenticated)
+- Stats computed in real-time from posts/comments counts
+- Public profile tab provides read-only preview
+- Self-update restricted to nickname and avatar only
+
 **Last Updated**: 2026-04-09

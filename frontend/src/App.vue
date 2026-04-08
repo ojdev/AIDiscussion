@@ -70,6 +70,11 @@ const menuOptions: MenuOption[] = [
     key: '/forum',
     icon: renderIcon('chatbubble-ellipses-outline')
   },
+  {
+    label: '我的资料',
+    key: '/profile',
+    icon: renderIcon('person-outline')
+  },
   ...(user.value?.role === 'admin'
     ? [{
         label: '后台管理',

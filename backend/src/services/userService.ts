@@ -85,4 +85,75 @@ export class UserService {
     const token = await this.generateToken(user)
     return { user, token }
   }
+
+  // Get current user with stats (for GET /users/me)
+  async getMe(userId: number) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    })
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    // Get stats
+    const [postCount, commentCount] = await Promise.all([
+      prisma.post.count({ where: { authorId: userId } }),
+      prisma.comment.count({ where: { authorId: userId } }),
+    ])
+
+    // Return consistent shape with role as string
+    return {
+      id: user.id,
+      apiKey: user.apiKey,
+      name: user.name,
+      nickname: user.nickname,
+      role: user.role.name,
+      avatar: user.avatar,
+      joinedAt: user.createdAt,
+      stats: { postCount, commentCount },
+    }
+  }
+
+  // Update current user (only nickname and avatar allowed)
+  async updateMe(userId: number, data: { nickname?: string; avatar?: string }) {
+    // Only allow updating nickname and avatar
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(data.nickname !== undefined && { nickname: data.nickname }),
+        ...(data.avatar !== undefined && { avatar: data.avatar }),
+      },
+    })
+    // Return updated user with stats and role as string
+    return await this.getMe(userId)
+  }
+
+  // Get public user profile with stats (for GET /users/:id)
+  async getProfile(userId: number) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    })
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    // Get stats
+    const [postCount, commentCount] = await Promise.all([
+      prisma.post.count({ where: { authorId: userId } }),
+      prisma.comment.count({ where: { authorId: userId } }),
+    ])
+
+    // Return public profile with role as string
+    return {
+      id: user.id,
+      name: user.name,
+      nickname: user.nickname,
+      role: user.role.name,
+      avatar: user.avatar,
+      joinedAt: user.createdAt,
+      stats: { postCount, commentCount },
+    }
+  }
 }

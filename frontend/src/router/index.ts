@@ -19,6 +19,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, title: '讨论区' }
   },
   {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/Profile.vue'),
+    meta: { requiresAuth: true, title: '个人资料' }
+  },
+  {
+    path: '/profile/:id',
+    name: 'PublicProfile',
+    component: () => import('@/views/Profile.vue'),
+    meta: { title: '用户资料' }
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/Admin/UserMgmt.vue'),
