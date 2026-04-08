@@ -46,6 +46,9 @@ async function main() {
   const commentsRoutes = await import('./routes/comments/index.js')
   fastify.register(commentsRoutes.default, { prefix: '/comments' })
 
+  const searchRoutes = await import('./routes/search/index.js')
+  fastify.register(searchRoutes.default, { prefix: '/search' })
+
   // Health check
   fastify.get('/health', async (req, reply) => {
     return { status: 'ok', timestamp: new Date().toISOString() }

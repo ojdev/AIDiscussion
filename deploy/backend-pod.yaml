@@ -19,14 +19,23 @@ spec:
           value: "production"
         - name: PORT
           value: "8200"
-        # Database and JWT secret should be set via secrets or external config
-        # - name: DATABASE_URL
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: ai-discussion-secrets
-        #       key: database-url
-        # - name: JWT_SECRET
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: ai-discussion-secrets
-        #       key: jwt-secret
+        - name: DATABASE_URL
+          value: "postgresql://ai:AI2025pass@localhost:5432/ai_discussion?schema=public"
+        - name: JWT_SECRET
+          value: "AIDiscussion-JWT-Secret-Change-Me"
+    - name: postgres
+      image: docker.io/library/postgres:15-alpine
+      restartPolicy: always
+      env:
+        - name: POSTGRES_USER
+          value: "ai"
+        - name: POSTGRES_PASSWORD
+          value: "AI2025pass"
+        - name: POSTGRES_DB
+          value: "ai_discussion"
+      volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+  volumes:
+    - name: postgres-data
+      emptyDir: {}

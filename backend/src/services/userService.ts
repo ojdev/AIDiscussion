@@ -25,11 +25,27 @@ export class UserService {
     })
   }
 
-  async getAllUsers() {
-    return await prisma.user.findMany({
-      include: { role: true },
-      orderBy: { createdAt: 'desc' },
-    })
+  async getAllUsers(page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit
+    const [total, users] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.findMany({
+        include: { role: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ])
+
+    return {
+      data: users,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
   }
 
   async getUserById(id: number) {

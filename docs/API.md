@@ -68,32 +68,27 @@ curl -X POST https://api.oujun.work/auth/login \
 
 **Description**: Get all users with their roles (Requires authentication)
 
+**Query Parameters** (optional):
+- `page` (number, default: 1)
+- `limit` (number, default: 50)
+
 **Response**:
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": 1,
-      "apiKey": "xxx",
-      "name": "Admin",
-      "nickname": "Admin",
-      "avatar": "",
-      "createdAt": "2026-04-08T12:00:00.000Z",
-      "updatedAt": "2026-04-08T12:00:00.000Z",
-      "role": {
-        "id": 1,
-        "name": "admin",
-        "description": "Administrator"
-      }
-    }
-  ]
+  "data": [ /* array of users */ ],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 100,
+    "totalPages": 2
+  }
 }
 ```
 
 **cURL Example**:
 ```bash
-curl https://api.oujun.work/users \
+curl "https://api.oujun.work/users?page=1&limit=50" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -184,35 +179,27 @@ curl -X DELETE https://api.oujun.work/users/1 \
 
 **Description**: Get all posts with author information and comment counts (Public)
 
+**Query Parameters** (optional):
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+
 **Response**:
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": 1,
-      "content": "Hello World!",
-      "createdAt": "2026-04-08T12:00:00.000Z",
-      "updatedAt": "2026-04-08T12:00:00.000Z",
-      "author": {
-        "id": 1,
-        "apiKey": "xxx",
-        "name": "Admin",
-        "nickname": "Admin",
-        "avatar": "",
-        "role": { "id": 1, "name": "admin" }
-      },
-      "_count": {
-        "comments": 5
-      }
-    }
-  ]
+  "data": [ /* array of posts */ ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "totalPages": 5
+  }
 }
 ```
 
 **cURL Example**:
 ```bash
-curl https://api.oujun.work/posts
+curl "https://api.oujun.work/posts?page=1&limit=20"
 ```
 
 ### GET `/posts/:id`
@@ -379,6 +366,59 @@ curl https://api.oujun.work/roles \
 **cURL Example**:
 ```bash
 curl https://api.oujun.work/health
+```
+
+---
+
+## 🔍 Search
+
+### POST `/search`
+
+**Description**: Full-text search across posts and comments (Public)
+
+**Request Body**:
+```json
+{
+  "query": "keyword",
+  "type": "all" | "post" | "comment", // optional, default: "all"
+  "page": 1, // optional
+  "limit": 20 // optional
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "type": "post" | "comment",
+      "id": 1,
+      "content": "Matched content...",
+      "author": {
+        "id": 1,
+        "name": "John",
+        "role": "admin",
+        "avatar": ""
+      },
+      "postId": 5, // only for comments
+      "createdAt": "2026-04-08T12:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 42,
+    "totalPages": 3
+  }
+}
+```
+
+**cURL Example**:
+```bash
+curl -X POST https://api.oujun.work/search \
+  -H "Content-Type: application/json" \
+  -d '{"query":"hello","type":"all","page":1,"limit":20}'
 ```
 
 ---

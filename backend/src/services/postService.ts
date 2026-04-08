@@ -3,18 +3,34 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export class PostService {
-  async getAllPosts() {
-    return await prisma.post.findMany({
-      include: {
-        author: {
-          include: { role: true },
+  async getAllPosts(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit
+    const [total, posts] = await Promise.all([
+      prisma.post.count(),
+      prisma.post.findMany({
+        include: {
+          author: {
+            include: { role: true },
+          },
+          _count: {
+            select: { comments: true },
+          },
         },
-        _count: {
-          select: { comments: true },
-        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ])
+
+    return {
+      data: posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: { createdAt: 'desc' },
-    })
+    }
   }
 
   async getPostById(id: number) {

@@ -1,5 +1,28 @@
 <template>
   <div>
+    <!-- 搜索区域 -->
+    <n-card title="搜索" style="margin-bottom: 24px;">
+      <n-space>
+        <n-input
+          v-model:value="searchQuery"
+          placeholder="搜索帖子和评论..."
+          clearable
+          @keyup.enter="handleSearch"
+          style="width: 300px;"
+        >
+          <template #prefix>
+            <n-icon><SearchIcon /></n-icon>
+          </template>
+        </n-input>
+        <n-button type="primary" :loading="searching" @click="handleSearch">
+          搜索
+        </n-button>
+        <n-button v-if="hasSearched" @click="clearSearch">
+          清除
+        </n-button>
+      </n-space>
+    </n-card>
+
     <!-- 发布区域 -->
     <n-card title="发布新讨论" style="margin-bottom: 24px;">
       <n-form ref="formRef" :model="newPost" :rules="rules">
@@ -19,12 +42,90 @@
       </n-form>
     </n-card>
 
+    <!-- 搜索结果显示 -->
+    <div v-if="hasSearched" style="margin-bottom: 24px;">
+      <n-card title="搜索结果">
+        <div v-if="searchLoading" style="text-align: center; padding: 40px;">
+          <n-spin size="large" />
+        </div>
+        <div v-else>
+          <n-empty v-if="searchResults.length === 0" description="未找到相关结果" />
+          <div v-else>
+            <n-list hoverable clickable>
+              <n-list-item v-for="item in searchResults" :key="`${item.type}-${item.id}`">
+                <n-space vertical>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <n-tag :type="item.type === 'post' ? 'primary' : 'success'" :bordered="false">
+                      {{ item.type === 'post' ? '帖子' : '评论' }}
+                    </n-tag>
+                    <n-text depth="3">{{ formatDate(item.createdAt) }}</n-text>
+                    <n-space>
+                      <n-avatar round size="small" :src="item.author.avatar" />
+                      <span>{{ item.author.name }}</span>
+                      <n-tag size="small" :type="item.author.role === 'admin' ? 'error' : 'default'">
+                        {{ item.author.role }}
+                      </n-tag>
+                    </n-space>
+                  </div>
+                  <div class="search-content" v-html="renderMarkdown(item.content)"></div>
+                  <n-button
+                    v-if="item.type === 'comment'"
+                    text
+                    type="primary"
+                    size="small"
+                    @click="goToPost(item.postId)"
+                  >
+                    查看原帖子
+                  </n-button>
+                </n-space>
+              </n-list-item>
+            </n-list>
+            <!-- 搜索分页 -->
+            <div v-if="searchPagination.totalPages > 1" style="margin-top: 16px; display: flex; justify-content: center; gap: 8px;">
+              <n-button
+                :disabled="searchPagination.page === 1"
+                @click="loadSearchPage(searchPagination.page - 1)"
+              >
+                上一页
+              </n-button>
+              <n-text depth="3">第 {{ searchPagination.page }} 页 / 共 {{ searchPagination.totalPages }} 页 ({{ searchPagination.total }} 条结果)</n-text>
+              <n-button
+                :disabled="searchPagination.page >= searchPagination.totalPages"
+                @click="loadSearchPage(searchPagination.page + 1)"
+              >
+                下一页
+              </n-button>
+            </div>
+          </div>
+        </div>
+      </n-card>
+    </div>
+
+    <!-- 讨论列表分页控制 -->
+    <div v-if="!hasSearched" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+      <n-text depth="3">共 {{ pagination.total }} 条讨论，当前第 {{ pagination.page }} / {{ pagination.totalPages }} 页</n-text>
+      <n-space>
+        <n-button
+          :disabled="pagination.page === 1"
+          @click="loadPage(pagination.page - 1)"
+        >
+          上一页
+        </n-button>
+        <n-button
+          :disabled="pagination.page >= pagination.totalPages"
+          @click="loadPage(pagination.page + 1)"
+        >
+          下一页
+        </n-button>
+      </n-space>
+    </div>
+
     <!-- 讨论列表 -->
     <div v-if="loading" style="text-align: center; padding: 40px;">
       <n-spin size="large" />
     </div>
 
-    <div v-else>
+    <div v-else-if="!hasSearched">
       <div v-for="post in posts" :key="post.id" class="post-card">
         <n-card :title="post.author.name" size="small">
           <template #header-extra>
@@ -184,8 +285,9 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useMessage } from 'naive-ui'
-import { postsApi, commentsApi } from '@/api'
+import { postsApi, commentsApi, searchApi } from '@/api'
 import { marked } from 'marked'
+import { Search as SearchIcon } from '@vicons/ionicons5'
 import type { FormInst } from 'naive-ui'
 
 const message = useMessage()
@@ -219,6 +321,20 @@ interface Comment {
   postId: number
 }
 
+interface SearchResult {
+  type: 'post' | 'comment'
+  id: number
+  content: string
+  author: {
+    id: number
+    name: string
+    role: string
+    avatar?: string
+  }
+  postId?: number
+  createdAt: string
+}
+
 const userStore = useUserStore()
 const currentUser = computed(() => userStore.user)
 
@@ -226,6 +342,26 @@ const formRef = ref<FormInst>()
 const loading = ref(false)
 const publishing = ref(false)
 const posts = ref<Post[]>([])
+
+// Pagination state for posts
+const pagination = ref({
+  page: 1,
+  totalPages: 1,
+  total: 0,
+})
+
+// Search state
+const searchQuery = ref('')
+const searching = ref(false)
+const hasSearched = ref(false)
+const searchLoading = ref(false)
+const searchResults = ref<SearchResult[]>([])
+const searchPagination = ref({
+  page: 1,
+  totalPages: 1,
+  total: 0,
+})
+
 const expandedPostId = ref<number | null>(null)
 const commentsMap = ref<Record<number, Comment[]>>({})
 const newComments = ref<Record<number, string>>({})
@@ -276,18 +412,34 @@ function renderMarkdown(text: string) {
   return marked(text)
 }
 
-async function loadPosts() {
+// Load posts with pagination
+async function loadPosts(page: number = pagination.value.page) {
   try {
     loading.value = true
-    const res = await postsApi.getAll()
-    if (res.success && res.data) {
-      posts.value = res.data
+    const res = await postsApi.getAll(page, 20)
+    if (res.success) {
+      posts.value = res.data as any[]
+      if (res.pagination) {
+        pagination.value = {
+          page: res.pagination.page,
+          totalPages: res.pagination.totalPages,
+          total: res.pagination.total,
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to load posts:', error)
   } finally {
     loading.value = false
   }
+}
+
+async function loadPage(page: number) {
+  if (page < 1 || page > pagination.value.totalPages) return
+  pagination.value.page = page
+  await loadPosts(page)
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function handlePublish() {
@@ -298,7 +450,8 @@ async function handlePublish() {
     const res = await postsApi.create(newPost.content)
     if (res.success) {
       newPost.content = ''
-      await loadPosts()
+      await loadPosts(1) // Refresh to first page after creating new post
+      message.success('发布成功')
     } else {
       message.error(res.error || '发布失败')
     }
@@ -329,11 +482,13 @@ async function handleSavePost(postId: number) {
   try {
     const res = await postsApi.update(postId, editingPostContent.value)
     if (res.success) {
-      await loadPosts()
+      await loadPosts(pagination.value.page)
       cancelEditPost()
+      message.success('更新成功')
     }
   } catch (error) {
     console.error('Failed to update post:', error)
+    message.error('更新失败')
   } finally {
     savingPostId.value = null
   }
@@ -360,11 +515,13 @@ async function handleSaveComment(commentId: number, postId: number) {
     const res = await commentsApi.update(commentId, editingCommentContent.value)
     if (res.success) {
       await loadComments(postId)
-      await loadPosts()
+      await loadPosts(pagination.value.page)
       cancelEditComment()
+      message.success('评论更新成功')
     }
   } catch (error) {
     console.error('Failed to update comment:', error)
+    message.error('更新失败')
   } finally {
     savingCommentId.value = null
   }
@@ -400,7 +557,8 @@ async function handleAddComment(postId: number) {
     if (res.success) {
       newComments.value[postId] = ''
       await loadComments(postId)
-      await loadPosts() // 更新评论计数
+      await loadPosts(pagination.value.page) // 更新评论计数
+      message.success('回复成功')
     } else {
       message.error(res.error || '回复失败')
     }
@@ -414,7 +572,8 @@ async function handleAddComment(postId: number) {
 async function handleDeletePost(postId: number) {
   try {
     await postsApi.delete(postId)
-    await loadPosts()
+    await loadPosts(pagination.value.page)
+    message.success('删除成功')
   } catch (error: any) {
     message.error(error?.error || '删除失败')
   }
@@ -426,11 +585,73 @@ async function handleDeleteComment(commentId: number) {
     const currentPostId = expandedPostId.value
     if (currentPostId) {
       await loadComments(currentPostId)
-      await loadPosts()
+      await loadPosts(pagination.value.page)
     }
+    message.success('删除成功')
   } catch (error: any) {
     message.error(error?.error || '删除失败')
   }
+}
+
+// Search functionality
+async function handleSearch() {
+  const query = searchQuery.value.trim()
+  if (!query) {
+    message.warning('请输入搜索关键词')
+    return
+  }
+
+  searching.value = true
+  hasSearched.value = true
+  searchPagination.value.page = 1 // Reset to first page
+  await loadSearchResults(1)
+}
+
+async function loadSearchResults(page: number = 1) {
+  const query = searchQuery.value.trim()
+  if (!query) return
+
+  searchLoading.value = true
+  try {
+    const res = await searchApi.search(query, 'all', page, 20)
+    if (res.success) {
+      searchResults.value = res.data as SearchResult[]
+      if (res.pagination) {
+        searchPagination.value = {
+          page: res.pagination.page,
+          totalPages: res.pagination.totalPages,
+          total: res.pagination.total,
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to search:', error)
+    message.error('搜索失败')
+  } finally {
+    searchLoading.value = false
+    searching.value = false
+  }
+}
+
+async function loadSearchPage(page: number) {
+  if (page < 1 || page > searchPagination.value.totalPages) return
+  searchPagination.value.page = page
+  await loadSearchResults(page)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  hasSearched.value = false
+  searchResults.value = []
+  searchPagination.value = { page: 1, totalPages: 1, total: 0 }
+}
+
+function goToPost(postId: number | undefined) {
+  if (postId === undefined) return
+  // Navigate to post - for now just expand it
+  expandedPostId.value = postId
+  loadComments(postId)
 }
 
 onMounted(() => {
@@ -457,6 +678,14 @@ onMounted(() => {
   line-height: 1.6;
 }
 .post-content :deep(br) {
+  display: block;
+  content: "";
+  margin-bottom: 0.5em;
+}
+.search-content {
+  line-height: 1.6;
+}
+.search-content :deep(br) {
   display: block;
   content: "";
   margin-bottom: 0.5em;

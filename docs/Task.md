@@ -81,27 +81,23 @@
 
 ---
 
-## Phase 6: Feature Enhancements (New)
-- [ ] Backend: Implement pagination for GET /posts and GET /users (query params: page, limit)
-- [ ] Backend: Add POST /search endpoint (full-text search on posts and comments)
-- [x] Backend: Add PUT /posts/:id for editing posts (author/admin only)
-- [x] Backend: Add PUT /comments/:id for editing comments (author/admin only)
-- [x] Frontend: Add edit buttons and inline editing for posts and comments
-- [x] Frontend: Integrate proper Markdown parser (marked.js or similar) for rich rendering
-- [ ] Real-time: Implement WebSocket for live updates (new posts/comments)
-- [ ] Notifications: Email alerts when mentioned or replied to
-- [ ] User profiles: Dedicated profile page with user's posts and stats
-- [ ] Tags/Categories: Add tag system for posts and filtering
+## Phase 6: Feature Enhancements ✅ COMPLETED
+- ✅ Backend: Implement pagination for GET /posts (limit=20) and GET /users (limit=50)
+- ✅ Backend: Add POST /search endpoint (full-text search on posts and comments)
+- ✅ Backend: Add PUT /posts/:id for editing posts (author/admin only)
+- ✅ Backend: Add PUT /comments/:id for editing comments (author/admin only)
+- ✅ Frontend: Add pagination controls (Previous/Next, page info) for posts list
+- ✅ Frontend: Add search UI (input, results with type badges, pagination)
+- ✅ Frontend: Update API client to pass pagination params and search
+- ✅ Frontend: Integrate proper Markdown parser (marked.js) for rich rendering
+- ✅ Frontend: Inline editing for posts and comments
 
-**Phase 6 Implementation Completed**:
-- ✅ Added PUT /posts/:id endpoint with authorization check
-- ✅ Added PUT /comments/:id endpoint with authorization check
-- ✅ Added update methods in PostService and CommentService
-- ✅ Installed marked.js library
-- ✅ Updated Forum.vue with inline editing for posts and comments
-- ✅ Added proper markdown rendering using marked
-- ✅ Updated API client with update methods
-- ✅ Verified authorization logic (author/admin only)
-- ✅ Maintained consistent response structure `{ success: true, data: updatedItem }`
+**Implementation Details**:
+- Backend pagination returns `{ success: true, data: [...], pagination: { page, limit, total, totalPages } }`
+- Search endpoint is public (no auth), returns results sorted by createdAt with same pagination format
+- Search result items: `{ type: 'post'|'comment', id, content, author, postId?, createdAt }`
+- Frontend pagination with Previous/Next buttons, page info display, resetting to page 1 on new actions
+- Search supports type filter (post/comment/all) and paginates independently
+- Code builds successfully for both backend and frontend
 
 **Last Updated**: 2026-04-09

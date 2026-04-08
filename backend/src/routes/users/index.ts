@@ -5,14 +5,16 @@ import { verifyToken } from '../../middleware/auth.js'
 export default async function usersRouter(fastify: FastifyInstance) {
   const userService = new UserService()
 
-  // GET /users - 获取所有用户
+  // GET /users - 获取所有用户（分页）
   fastify.get(
     '/',
     { onRequest: verifyToken },
     async (req: any, reply: any) => {
       try {
-        const users = await userService.getAllUsers()
-        return { success: true, data: users }
+        const page = parseInt(req.query.page as string) || 1
+        const limit = parseInt(req.query.limit as string) || 50
+        const result = await userService.getAllUsers(page, limit)
+        return { success: true, data: result.data, pagination: result.pagination }
       } catch (error: any) {
         return reply.code(500).send({ success: false, error: error.message })
       }

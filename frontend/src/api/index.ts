@@ -62,6 +62,12 @@ export interface LoginResponse {
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T
+  pagination?: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
   error?: string
 }
 
@@ -77,8 +83,8 @@ export const authApi = {
 }
 
 export const usersApi = {
-  getAll() {
-    return unwrap<any[]>(api.get('/users'))
+  getAll(page: number = 1, limit: number = 50) {
+    return unwrap<any>(api.get('/users', { params: { page, limit } }))
   },
   getById(id: number) {
     return unwrap<any>(api.get(`/users/${id}`))
@@ -101,8 +107,8 @@ export const usersApi = {
 }
 
 export const postsApi = {
-  getAll() {
-    return unwrap<any[]>(api.get('/posts'))
+  getAll(page: number = 1, limit: number = 20) {
+    return unwrap<any>(api.get('/posts', { params: { page, limit } }))
   },
   getById(id: number) {
     return unwrap<any>(api.get(`/posts/${id}`))
@@ -130,6 +136,12 @@ export const commentsApi = {
   },
   update(id: number, content: string) {
     return unwrap<any>(api.put(`/comments/${id}`, { content }))
+  }
+}
+
+export const searchApi = {
+  search(query: string, type: 'post' | 'comment' | 'all' = 'all', page: number = 1, limit: number = 20) {
+    return unwrap<any>(api.post('/search', { query, type, page, limit }))
   }
 }
 

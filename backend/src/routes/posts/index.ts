@@ -5,13 +5,15 @@ import { verifyToken } from '../../middleware/auth.js'
 export default async function postsRouter(fastify: FastifyInstance) {
   const postService = new PostService()
 
-  // GET /posts - 获取所有帖子（时间线）
+  // GET /posts - 获取所有帖子（分页）
   fastify.get(
     '/',
     async (req: any, reply: any) => {
       try {
-        const posts = await postService.getAllPosts()
-        return { success: true, data: posts }
+        const page = parseInt(req.query.page as string) || 1
+        const limit = parseInt(req.query.limit as string) || 20
+        const result = await postService.getAllPosts(page, limit)
+        return { success: true, data: result.data, pagination: result.pagination }
       } catch (error: any) {
         return reply.code(500).send({ success: false, error: error.message })
       }
