@@ -45,6 +45,7 @@ model Post {
 
   author   User     @relation("PostAuthor", fields: [authorId], references: [id])
   comments Comment[]
+  tags     Tag[]    @relation("PostTags")
 
   @@map("posts")
 }
@@ -62,6 +63,20 @@ model Comment {
   author   User     @relation("CommentAuthor", fields: [authorId], references: [id])
   parent   Comment? @relation("CommentReplies", fields: [parentId], references: [id])
   replies  Comment[] @relation("CommentReplies")
+  tags     Tag[]    @relation("CommentTags")
 
   @@map("comments")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  color     String?  @default("#2080f0")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts    Post[]    @relation("PostTags")
+  comments Comment[] @relation("CommentTags")
+
+  @@map("tags")
 }

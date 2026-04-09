@@ -1,38 +1,38 @@
-# API Documentation
+# API 文档
 
-**Base URL**: `https://api.oujun.work` (Production) | `http://localhost:8200` (Development)
+**基础 URL**: `https://api.oujun.work` (生产) | `http://localhost:8200` (开发)
 
-**Authentication**: All endpoints except `/auth/login` require the header:
+**认证**: 除 `/auth/login` 外，所有端点都需要在请求头中包含：
 ```
 Authorization: Bearer <jwt-token>
 ```
 
-**Response Format**: All endpoints return JSON with the following structure:
+**响应格式**: 所有端点返回 JSON，结构如下：
 
 ```json
 {
   "success": true | false,
   "data": {}, // 成功时的数据
-  "error": "error message" // 失败时的错误信息
+  "error": "错误信息" // 失败时的错误信息
 }
 ```
 
 ---
 
-## 🔐 Authentication
+## 🔐 认证
 
 ### POST `/auth/login`
 
-**Description**: Authenticate with API key and receive JWT token
+**描述**: 使用 API key 认证并获取 JWT token
 
-**Request Body**:
+**请求体**:
 ```json
 {
   "apiKey": "your-api-key"
 }
 ```
 
-**Response**:
+**响应**:
 ```json
 {
   "success": true,
@@ -53,7 +53,7 @@ Authorization: Bearer <jwt-token>
 **Error Codes**:
 - `401`: Invalid API key
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X POST https://api.oujun.work/auth/login \
   -H "Content-Type: application/json" \
@@ -66,13 +66,13 @@ curl -X POST https://api.oujun.work/auth/login \
 
 ### GET `/users`
 
-**Description**: Get all users with their roles (Requires authentication)
+**描述**: Get all users with their roles (Requires authentication)
 
-**Query Parameters** (optional):
+**查询参数** (optional):
 - `page` (number, default: 1)
 - `limit` (number, default: 50)
 
-**Response**:
+**响应**:
 ```json
 {
   "success": true,
@@ -86,7 +86,7 @@ curl -X POST https://api.oujun.work/auth/login \
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl "https://api.oujun.work/users?page=1&limit=50" \
   -H "Authorization: Bearer <token>"
@@ -94,9 +94,9 @@ curl "https://api.oujun.work/users?page=1&limit=50" \
 
 ### GET `/users/:id`
 
-**Description**: Get a specific user by ID
+**描述**: Get a specific user by ID
 
-**Response**:
+**响应**:
 ```json
 {
   "success": true,
@@ -104,7 +104,7 @@ curl "https://api.oujun.work/users?page=1&limit=50" \
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl https://api.oujun.work/users/1 \
   -H "Authorization: Bearer <token>"
@@ -112,9 +112,9 @@ curl https://api.oujun.work/users/1 \
 
 ### POST `/users`
 
-**Description**: Create a new user (Admin only recommended)
+**描述**: Create a new user (Admin only recommended)
 
-**Request Body**:
+**请求体**:
 ```json
 {
   "apiKey": "new-user-key",
@@ -125,9 +125,9 @@ curl https://api.oujun.work/users/1 \
 }
 ```
 
-**Response**: Created user object
+**响应**: Created user object
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X POST https://api.oujun.work/users \
   -H "Authorization: Bearer <token>" \
@@ -141,9 +141,9 @@ curl -X POST https://api.oujun.work/users \
 
 ### PUT `/users/:id`
 
-**Description**: Update a user (Admin only recommended)
+**描述**: Update a user (Admin only recommended)
 
-**Request Body**: Partial user object
+**请求体**: Partial user object
 ```json
 {
   "name": "Updated Name",
@@ -153,7 +153,7 @@ curl -X POST https://api.oujun.work/users \
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X PUT https://api.oujun.work/users/1 \
   -H "Authorization: Bearer <token>" \
@@ -163,9 +163,9 @@ curl -X PUT https://api.oujun.work/users/1 \
 
 ### DELETE `/users/:id`
 
-**Description**: Delete a user
+**描述**: Delete a user
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X DELETE https://api.oujun.work/users/1 \
   -H "Authorization: Bearer <token>"
@@ -177,13 +177,13 @@ curl -X DELETE https://api.oujun.work/users/1 \
 
 ### GET `/posts`
 
-**Description**: Get all posts with author information and comment counts (Public)
+**描述**: Get all posts with author information and comment counts (Public)
 
-**Query Parameters** (optional):
+**查询参数** (optional):
 - `page` (number, default: 1)
 - `limit` (number, default: 20)
 
-**Response**:
+**响应**:
 ```json
 {
   "success": true,
@@ -197,16 +197,16 @@ curl -X DELETE https://api.oujun.work/users/1 \
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl "https://api.oujun.work/posts?page=1&limit=20"
 ```
 
 ### GET `/posts/:id`
 
-**Description**: Get a single post with all its comments and nested replies
+**描述**: Get a single post with all its comments and nested replies
 
-**Response**:
+**响应**:
 ```json
 {
   "success": true,
@@ -233,25 +233,25 @@ curl "https://api.oujun.work/posts?page=1&limit=20"
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl https://api.oujun.work/posts/1
 ```
 
 ### POST `/posts`
 
-**Description**: Create a new post (Authentication required)
+**描述**: Create a new post (Authentication required)
 
-**Request Body**:
+**请求体**:
 ```json
 {
   "content": "This is my new post content"
 }
 ```
 
-**Response**: Created post with author info
+**响应**: Created post with author info
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X POST https://api.oujun.work/posts \
   -H "Authorization: Bearer <token>" \
@@ -261,9 +261,9 @@ curl -X POST https://api.oujun.work/posts \
 
 ### DELETE `/posts/:id`
 
-**Description**: Delete a post (Only admin or post author)
+**描述**: Delete a post (Only admin or post author)
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X DELETE https://api.oujun.work/posts/1 \
   -H "Authorization: Bearer <token>"
@@ -275,18 +275,18 @@ curl -X DELETE https://api.oujun.work/posts/1 \
 
 ### GET `/posts/:postId/comments`
 
-**Description**: Get all top-level comments for a post (with their replies)
+**描述**: Get all top-level comments for a post (with their replies)
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl https://api.oujun.work/posts/1/comments
 ```
 
 ### POST `/posts/:postId/comments`
 
-**Description**: Add a comment or reply (Authentication required)
+**描述**: Add a comment or reply (Authentication required)
 
-**Request Body**:
+**请求体**:
 ```json
 {
   "content": "This is a comment",
@@ -294,7 +294,7 @@ curl https://api.oujun.work/posts/1/comments
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X POST https://api.oujun.work/posts/1/comments \
   -H "Authorization: Bearer <token>" \
@@ -304,9 +304,9 @@ curl -X POST https://api.oujun.work/posts/1/comments \
 
 ### DELETE `/comments/:id`
 
-**Description**: Delete a comment (Only admin or comment author)
+**描述**: Delete a comment (Only admin or comment author)
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X DELETE https://api.oujun.work/comments/5 \
   -H "Authorization: Bearer <token>"
@@ -318,9 +318,9 @@ curl -X DELETE https://api.oujun.work/comments/5 \
 
 ### GET `/roles`
 
-**Description**: Get all roles
+**描述**: Get all roles
 
-**Response**:
+**响应**:
 ```json
 {
   "success": true,
@@ -341,7 +341,7 @@ curl -X DELETE https://api.oujun.work/comments/5 \
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl https://api.oujun.work/roles \
   -H "Authorization: Bearer <token>"
@@ -353,9 +353,9 @@ curl https://api.oujun.work/roles \
 
 ### GET `/health`
 
-**Description**: Health check endpoint (Public)
+**描述**: Health check endpoint (Public)
 
-**Response**:
+**响应**:
 ```json
 {
   "status": "ok",
@@ -363,7 +363,7 @@ curl https://api.oujun.work/roles \
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl https://api.oujun.work/health
 ```
@@ -374,9 +374,9 @@ curl https://api.oujun.work/health
 
 ### POST `/search`
 
-**Description**: Full-text search across posts and comments (Public)
+**描述**: Full-text search across posts and comments (Public)
 
-**Request Body**:
+**请求体**:
 ```json
 {
   "query": "keyword",
@@ -386,7 +386,7 @@ curl https://api.oujun.work/health
 }
 ```
 
-**Response**:
+**响应**:
 ```json
 {
   "success": true,
@@ -414,7 +414,7 @@ curl https://api.oujun.work/health
 }
 ```
 
-**cURL Example**:
+**cURL 示例**:
 ```bash
 curl -X POST https://api.oujun.work/search \
   -H "Content-Type: application/json" \

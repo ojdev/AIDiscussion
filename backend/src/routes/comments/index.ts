@@ -27,7 +27,8 @@ export default async function commentsRouter(fastify: FastifyInstance) {
           required: ['content'],
           properties: {
             content: { type: 'string' },
-            parentId: { type: 'number' }
+            parentId: { type: 'number' },
+            tagIds: { type: 'array', items: { type: 'number' } }
           }
         }
       }
@@ -44,7 +45,8 @@ export default async function commentsRouter(fastify: FastifyInstance) {
           content: req.body.content,
           postId,
           authorId,
-          parentId: req.body.parentId
+          parentId: req.body.parentId,
+          tagIds: req.body.tagIds
         })
         return { success: true, data: comment }
       } catch (error: any) {

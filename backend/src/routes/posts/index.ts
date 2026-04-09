@@ -48,6 +48,7 @@ export default async function postsRouter(fastify: FastifyInstance) {
           required: ['content'],
           properties: {
             content: { type: 'string' },
+            tagIds: { type: 'array', items: { type: 'number' } },
           },
         },
       },
@@ -62,6 +63,7 @@ export default async function postsRouter(fastify: FastifyInstance) {
         const post = await postService.createPost({
           content: req.body.content,
           authorId,
+          tagIds: req.body.tagIds,
         })
         return { success: true, data: post }
       } catch (error: any) {
@@ -108,6 +110,7 @@ export default async function postsRouter(fastify: FastifyInstance) {
           required: ['content'],
           properties: {
             content: { type: 'string' },
+            tagIds: { type: 'array', items: { type: 'number' } },
           },
         },
       },
@@ -127,7 +130,7 @@ export default async function postsRouter(fastify: FastifyInstance) {
           return reply.code(403).send({ success: false, error: 'Forbidden' })
         }
 
-        const updatedPost = await postService.updatePost(id, req.body.content)
+        const updatedPost = await postService.updatePost(id, req.body.content, req.body.tagIds)
         return { success: true, data: updatedPost }
       } catch (error: any) {
         return reply.code(500).send({ success: false, error: error.message })

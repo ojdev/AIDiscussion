@@ -34,6 +34,15 @@
             :autosize="{ minRows: 3, maxRows: 6 }"
           />
         </n-form-item>
+        <n-form-item label="标签">
+          <n-select
+            v-model:value="selectedTagIds"
+            multiple
+            :options="tagOptions"
+            placeholder="选择标签"
+            clearable
+          />
+        </n-form-item>
         <n-form-item>
           <n-button type="primary" :loading="publishing" @click="handlePublish">
             发布
@@ -136,14 +145,18 @@
       <div v-for="post in posts" :key="post.id" class="post-card">
         <n-card :title="post.author.name" size="small">
           <template #header-extra>
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <n-tag v-if="post.author.nickname" type="info" :bordered="false" size="small">
-                {{ post.author.nickname }}
-              </n-tag>
-              <n-tag :bordered="false" :type="post.author.role === 'admin' ? 'error' : 'default'">
-                {{ post.author.role === 'admin' ? '管理员' : '用户' }}
-              </n-tag>
-              <n-text depth="3">{{ formatDate(post.createdAt) }}</n-text>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <n-tag v-if="post.author.nickname" type="info" :bordered="false" size="small">
+                  {{ post.author.nickname }}
+                </n-tag>
+                <n-text depth="3">{{ formatDate(post.createdAt) }}</n-text>
+              </div>
+              <div v-if="post.tags?.length" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <n-tag v-for="tag in post.tags" :key="tag.id" size="small" :color="tag.color">
+                  {{ tag.name }}
+                </n-tag>
+              </div>
             </div>
           </template>
 
@@ -216,13 +229,16 @@
                       <n-tag v-if="comment.author.nickname" type="info" :bordered="false" size="small">
                         {{ comment.author.nickname }}
                       </n-tag>
-                      <n-tag size="small" :type="comment.author.role === 'admin' ? 'error' : 'default'">
-                        {{ comment.author.role }}
-                      </n-tag>
                     </div>
                     <n-text depth="3" style="font-size: 12px;">
                       {{ formatDate(comment.createdAt) }}
                     </n-text>
+                  </div>
+                  <!-- Tags -->
+                  <div v-if="comment.tags?.length" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                    <n-tag v-for="tag in comment.tags" :key="tag.id" size="small" :color="tag.color">
+                      {{ tag.name }}
+                    </n-tag>
                   </div>
 
                   <!-- 评论内容 -->
@@ -315,7 +331,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useMessage } from 'naive-ui'
-import { postsApi, commentsApi, searchApi } from '@/api'
+import { postsApi, commentsApi, searchApi, tagsApi } from '@/api'
 import { marked } from 'marked'
 import { Search as SearchIcon } from '@vicons/ionicons5'
 import type { FormInst } from 'naive-ui'
@@ -336,6 +352,7 @@ interface Post {
   _count?: {
     comments: number
   }
+  tags?: Tag[]
 }
 
 interface Comment {
@@ -350,6 +367,7 @@ interface Comment {
     avatar?: string
   }
   postId: number
+  tags?: Tag[]
 }
 
 interface SearchResult {
@@ -365,6 +383,12 @@ interface SearchResult {
   }
   postId?: number
   createdAt: string
+}
+
+interface Tag {
+  id: number
+  name: string
+  color?: string
 }
 
 const userStore = useUserStore()
@@ -400,6 +424,13 @@ const newComments = ref<Record<number, string>>({})
 const commenting = ref<Record<number, boolean>>({})
 // 正在回复的评论ID（用于嵌套回复）
 const replyingCommentId = ref<number | null>(null)
+
+// Tags
+const tags = ref<Tag[]>([])
+const selectedTagIds = ref<number[]>([])
+const commentTagIds = ref<Record<number, number[]>>({})
+
+const tagOptions = computed(() => tags.value.map(t => ({ label: t.name, value: t.id })))
 
 // Editing states
 const editingPostId = ref<number | null>(null)
@@ -481,9 +512,10 @@ async function handlePublish() {
     await formRef.value?.validate()
     publishing.value = true
 
-    const res = await postsApi.create(newPost.content)
+    const res = await postsApi.create(newPost.content, selectedTagIds.value)
     if (res.success) {
       newPost.content = ''
+      selectedTagIds.value = []
       await loadPosts(1) // Refresh to first page after creating new post
       message.success('发布成功')
     } else {
@@ -500,6 +532,10 @@ async function handlePublish() {
 function startEditPost(postId: number, content: string) {
   editingPostId.value = postId
   editingPostContent.value = content
+  const post = posts.value.find(p => p.id === postId)
+  if (post) {
+    selectedTagIds.value = post.tags?.map(t => t.id) || []
+  }
 }
 
 function cancelEditPost() {
@@ -514,10 +550,11 @@ async function handleSavePost(postId: number) {
 
   savingPostId.value = postId
   try {
-    const res = await postsApi.update(postId, editingPostContent.value)
+    const res = await postsApi.update(postId, editingPostContent.value, selectedTagIds.value)
     if (res.success) {
       await loadPosts(pagination.value.page)
       cancelEditPost()
+      selectedTagIds.value = []
       message.success('更新成功')
     }
   } catch (error) {
@@ -583,6 +620,9 @@ async function loadComments(postId: number) {
 
 function startReply(commentId: number) {
   replyingCommentId.value = commentId
+  if (!commentTagIds.value[commentId]) {
+    commentTagIds.value[commentId] = []
+  }
 }
 
 function cancelReplyComment() {
@@ -590,17 +630,17 @@ function cancelReplyComment() {
 }
 
 async function handleAddComment(postId: number, parentId?: number) {
-  // 确定使用哪个key：如果是嵌套回复，则用parentId作为key
   const key = parentId ?? postId
   const content = newComments.value[key]?.trim()
   if (!content) return
 
+  const tagIds = commentTagIds.value[key] || []
   commenting.value[key] = true
   try {
-    const res = await commentsApi.create(postId, content, parentId)
+    const res = await commentsApi.create(postId, content, parentId, tagIds)
     if (res.success) {
       newComments.value[key] = ''
-      // 如果是嵌套回复，关闭回复框
+      commentTagIds.value[key] = []
       if (parentId) {
         replyingCommentId.value = null
       }
@@ -702,8 +742,14 @@ function goToPost(postId: number | undefined) {
   loadComments(postId)
 }
 
-onMounted(() => {
-  loadPosts()
+onMounted(async () => {
+  try {
+    const tagRes = await tagsApi.getAll()
+    if (tagRes.success) tags.value = tagRes.data
+  } catch (e) {
+    console.error('Failed to load tags:', e)
+  }
+  await loadPosts()
 })
 </script>
 

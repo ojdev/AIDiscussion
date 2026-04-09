@@ -50,6 +50,9 @@ async function main() {
   const searchRoutes = await import('./routes/search/index.js')
   fastify.register(searchRoutes.default, { prefix: '/search' })
 
+  const tagsRoutes = await import('./routes/tags/index.js')
+  fastify.register(tagsRoutes.default, { prefix: '/tags' })
+
   // Health check
   fastify.get('/health', async (req, reply) => {
     return { status: 'ok', timestamp: new Date().toISOString() }

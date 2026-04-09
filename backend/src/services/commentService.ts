@@ -16,6 +16,7 @@ export class CommentService {
             role: true,
           },
         },
+        tags: true,
         replies: {
           include: {
             author: {
@@ -27,6 +28,7 @@ export class CommentService {
                 role: true,
               },
             },
+            tags: true,
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -35,9 +37,12 @@ export class CommentService {
     })
   }
 
-  async createComment(data: { content: string; postId: number; authorId: number; parentId?: number }) {
-    return await prisma.comment.create({
-      data,
+  async createComment(data: { content: string; postId: number; authorId: number; parentId?: number; tagIds?: number[] }) {
+    // 分离 tagIds
+    const { tagIds, ...commentData } = data
+
+    const comment = await prisma.comment.create({
+      data: commentData,
       include: {
         author: {
           select: {
@@ -50,6 +55,35 @@ export class CommentService {
         },
       },
     })
+
+    if (tagIds && tagIds.length > 0) {
+      await prisma.comment.update({
+        where: { id: comment.id },
+        data: {
+          tags: {
+            connect: tagIds.map(id => ({ id })),
+          },
+        },
+      })
+      // Reload with tags
+      return await prisma.comment.findUnique({
+        where: { id: comment.id },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              nickname: true,
+              avatar: true,
+              role: true,
+            },
+          },
+          tags: true,
+        },
+      })
+    }
+
+    return comment
   }
 
   async deleteComment(id: number) {
@@ -72,6 +106,7 @@ export class CommentService {
           },
         },
         post: true,
+        tags: true,
       },
     })
   }
@@ -90,6 +125,7 @@ export class CommentService {
             role: true,
           },
         },
+        tags: true,
       },
     })
   }

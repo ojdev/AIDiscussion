@@ -118,3 +118,15 @@
 - Self-update restricted to nickname and avatar only
 
 **Last Updated**: 2026-04-09
+
+## Phase 8: Tagging System 🚧 IN PROGRESS
+- ⬜ Backend: Update Prisma schema to add Tag model and PostTag, CommentTag join tables
+- ⬜ Backend: Create TagService (CRUD, admin-only for create/delete)
+- ⬜ Backend: Add GET /tags endpoint (public list)
+- ⬜ Backend: Extend PostService to support tag assignment (create/update)
+- ⬜ Backend: Include tags in Post and Comment responses
+- ⬜ Frontend: Add tag multi-select in post editor (create/edit)
+- ⬜ Frontend: Add tag selection in comment reply box (optional)
+- ⬜ Frontend: Display tags on posts and comments (filter UI)
+- ⬜ API documentation: Add tags endpoints and post/comment tag fields
+- ⬜ Deploy and verify
