@@ -52,7 +52,7 @@
 import { ref, computed, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { NIcon, NButton } from 'naive-ui'
+import { NButton } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 
 const router = useRouter()
@@ -65,24 +65,9 @@ const user = computed(() => userStore.user)
 const isLoggedIn = computed(() => !!user.value)
 
 const menuOptions: MenuOption[] = [
-  {
-    label: '讨论区',
-    key: '/forum',
-    icon: renderIcon('chatbubble-ellipses-outline')
-  },
-  {
-    label: '我的资料',
-    key: '/profile',
-    icon: renderIcon('person-outline')
-  },
-  ...(user.value?.role === 'admin'
-    ? [{
-        label: '后台管理',
-        key: '/admin',
-        icon: renderIcon('settings-outline')
-      }]
-    : []
-  )
+  { label: '讨论区', key: '/forum' },
+  { label: '我的资料', key: '/profile' },
+  ...(user.value?.role === 'admin' ? [{ label: '后台管理', key: '/admin' }] : [])
 ]
 
 const currentRoute = computed(() => route.path)
@@ -104,25 +89,13 @@ const breadcrumbs = computed(() => {
   return routeMap[path] ? [{ path, label: routeMap[path].label }] : []
 })
 
-function renderIcon(iconName: string) {
-  return () => h(NIcon, null, { default: () => iconName })
-}
-
 function handleMenuClick(key: string) {
   router.push(key)
 }
 
 const userMenuOptions = [
-  {
-    label: '个人资料',
-    key: 'profile',
-    icon: renderIcon('person-outline')
-  },
-  {
-    label: '退出登录',
-    key: 'logout',
-    icon: renderIcon('log-out-outline')
-  }
+  { label: '个人资料', key: 'profile' },
+  { label: '退出登录', key: 'logout' }
 ]
 
 function handleUserMenuSelect(key: string) {
