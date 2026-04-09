@@ -62,6 +62,9 @@
                     <n-space>
                       <n-avatar round size="small" :src="item.author.avatar" />
                       <span>{{ item.author.name }}</span>
+                      <n-tag v-if="item.author.nickname" type="info" :bordered="false" size="small">
+                        {{ item.author.nickname }}
+                      </n-tag>
                       <n-tag size="small" :type="item.author.role === 'admin' ? 'error' : 'default'">
                         {{ item.author.role }}
                       </n-tag>
@@ -130,6 +133,9 @@
         <n-card :title="post.author.name" size="small">
           <template #header-extra>
             <div style="display: flex; align-items: center; gap: 12px;">
+              <n-tag v-if="post.author.nickname" type="info" :bordered="false" size="small">
+                {{ post.author.nickname }}
+              </n-tag>
               <n-tag :bordered="false" :type="post.author.role === 'admin' ? 'error' : 'default'">
                 {{ post.author.role === 'admin' ? '管理员' : '用户' }}
               </n-tag>
@@ -197,6 +203,9 @@
                   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     <n-avatar round size="small" :src="comment.author.avatar" />
                     <span style="font-weight: 500;">{{ comment.author.name }}</span>
+                    <n-tag v-if="comment.author.nickname" type="info" :bordered="false" size="small">
+                      {{ comment.author.nickname }}
+                    </n-tag>
                     <n-tag size="small" :type="comment.author.role === 'admin' ? 'error' : 'default'">
                       {{ comment.author.role }}
                     </n-tag>
@@ -315,6 +324,7 @@ interface Comment {
   author: {
     id: number
     name: string
+    nickname?: string
     role: string
     avatar?: string
   }
@@ -328,6 +338,7 @@ interface SearchResult {
   author: {
     id: number
     name: string
+    nickname?: string
     role: string
     avatar?: string
   }
