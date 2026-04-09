@@ -1,5 +1,6 @@
 <template>
   <n-config-provider>
+    <n-message-provider>
     <n-layout has-sider style="min-height: 100vh">
       <n-layout-sider
         bordered
@@ -45,6 +46,7 @@
         </n-layout-content>
       </n-layout>
     </n-layout>
+    </n-message-provider>
   </n-config-provider>
 </template>
 
