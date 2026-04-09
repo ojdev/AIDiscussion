@@ -17,8 +17,9 @@ async function main() {
   })
 
   await fastify.register(fastifyCors, {
-    origin: true,
+    origin: 'https://pm.oujun.work',
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   })
 
   await fastify.register(fastifyHelmet)
