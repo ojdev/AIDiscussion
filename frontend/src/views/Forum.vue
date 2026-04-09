@@ -60,7 +60,11 @@
                     </n-tag>
                     <n-text depth="3">{{ formatDate(item.createdAt) }}</n-text>
                     <n-space>
-                      <n-avatar round size="small" :src="item.author.avatar" />
+                      <n-avatar
+                        round
+                        size="small"
+                        :src="item.author.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.author.name}`"
+                      />
                       <span>{{ item.author.name }}</span>
                       <n-tag v-if="item.author.nickname" type="info" :bordered="false" size="small">
                         {{ item.author.nickname }}
@@ -200,59 +204,76 @@
               </div>
               <div v-else>
                 <div v-for="comment in commentsMap[post.id]" :key="comment.id" class="comment-item">
+                  <!-- 头部：头像 + 用户信息 + 时间 -->
                   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    <n-avatar round size="small" :src="comment.author.avatar" />
-                    <span style="font-weight: 500;">{{ comment.author.name }}</span>
-                    <n-tag v-if="comment.author.nickname" type="info" :bordered="false" size="small">
-                      {{ comment.author.nickname }}
-                    </n-tag>
-                    <n-tag size="small" :type="comment.author.role === 'admin' ? 'error' : 'default'">
-                      {{ comment.author.role }}
-                    </n-tag>
-                    <n-text depth="3" style="margin-left: auto; font-size: 12px;">
+                    <n-avatar
+                      round
+                      size="small"
+                      :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author.name}`"
+                    />
+                    <div style="display: flex; align-items: center; gap: 6px; flex: 1;">
+                      <span style="font-weight: 500;">{{ comment.author.name }}</span>
+                      <n-tag v-if="comment.author.nickname" type="info" :bordered="false" size="small">
+                        {{ comment.author.nickname }}
+                      </n-tag>
+                      <n-tag size="small" :type="comment.author.role === 'admin' ? 'error' : 'default'">
+                        {{ comment.author.role }}
+                      </n-tag>
+                    </div>
+                    <n-text depth="3" style="font-size: 12px;">
                       {{ formatDate(comment.createdAt) }}
                     </n-text>
                   </div>
 
-                  <!-- 评论编辑模式 -->
-                  <div v-if="editingCommentId === comment.id">
-                    <n-input
-                      v-model:value="editingCommentContent"
-                      type="textarea"
-                      :autosize="{ minRows: 2, maxRows: 4 }"
-                    />
-                    <div style="margin-top: 8px; display: flex; gap: 8px;">
-                      <n-button type="primary" size="tiny" :loading="savingCommentId === comment.id" @click="handleSaveComment(comment.id, comment.postId)">
-                        保存
-                      </n-button>
-                      <n-button size="tiny" @click="cancelEditComment">
-                        取消
-                      </n-button>
-                    </div>
+                  <!-- 评论内容 -->
+                  <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                    <div class="comment-content" v-html="renderMarkdown(comment.content)"></div>
                   </div>
 
-                  <!-- 评论显示模式 -->
-                  <div v-else-if="!editingCommentId || editingCommentId !== comment.id">
-                    <div class="comment-content" v-html="renderMarkdown(comment.content)"></div>
+                  <!-- 底部操作栏 -->
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <n-button
+                      text
+                      type="primary"
+                      size="tiny"
+                      @click="startReply(comment.id)"
+                    >
+                      回复
+                    </n-button>
+                    <n-button
+                      v-if="canEditComment(comment)"
+                      text
+                      type="primary"
+                      size="tiny"
+                      @click="startEditComment(comment.id, comment.content)"
+                    >
+                      编辑
+                    </n-button>
+                    <n-button
+                      v-if="canDeleteComment(comment)"
+                      type="error"
+                      text
+                      size="tiny"
+                      @click="handleDeleteComment(comment.id)"
+                    >
+                      删除
+                    </n-button>
+                  </div>
 
-                    <div style="display: flex; gap: 8px; margin-top: 4px;">
-                      <n-button
-                        v-if="canEditComment(comment)"
-                        text
-                        type="primary"
-                        size="tiny"
-                        @click="startEditComment(comment.id, comment.content)"
-                      >
-                        编辑
+                  <!-- 嵌套回复输入框 (展开时) -->
+                  <div v-if="replyingCommentId === comment.id" style="margin-top: 12px; margin-left: 24px;">
+                    <n-input
+                      v-model:value="newComments[comment.id]"
+                      type="textarea"
+                      placeholder="写下你的回复..."
+                      :autosize="{ minRows: 2, maxRows: 4 }"
+                    />
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                      <n-button type="primary" size="tiny" :loading="commenting[comment.id]" @click="handleAddComment(post.id, comment.id)">
+                        发送
                       </n-button>
-                      <n-button
-                        v-if="canDeleteComment(comment)"
-                        type="error"
-                        text
-                        size="tiny"
-                        @click="handleDeleteComment(comment.id)"
-                      >
-                        删除
+                      <n-button size="tiny" @click="cancelReplyComment">
+                        取消
                       </n-button>
                     </div>
                   </div>
@@ -377,6 +398,8 @@ const expandedPostId = ref<number | null>(null)
 const commentsMap = ref<Record<number, Comment[]>>({})
 const newComments = ref<Record<number, string>>({})
 const commenting = ref<Record<number, boolean>>({})
+// 正在回复的评论ID（用于嵌套回复）
+const replyingCommentId = ref<number | null>(null)
 
 // Editing states
 const editingPostId = ref<number | null>(null)
@@ -558,15 +581,29 @@ async function loadComments(postId: number) {
   }
 }
 
-async function handleAddComment(postId: number) {
-  const content = newComments.value[postId]?.trim()
+function startReply(commentId: number) {
+  replyingCommentId.value = commentId
+}
+
+function cancelReplyComment() {
+  replyingCommentId.value = null
+}
+
+async function handleAddComment(postId: number, parentId?: number) {
+  // 确定使用哪个key：如果是嵌套回复，则用parentId作为key
+  const key = parentId ?? postId
+  const content = newComments.value[key]?.trim()
   if (!content) return
 
-  commenting.value[postId] = true
+  commenting.value[key] = true
   try {
-    const res = await commentsApi.create(postId, content)
+    const res = await commentsApi.create(postId, content, parentId)
     if (res.success) {
-      newComments.value[postId] = ''
+      newComments.value[key] = ''
+      // 如果是嵌套回复，关闭回复框
+      if (parentId) {
+        replyingCommentId.value = null
+      }
       await loadComments(postId)
       await loadPosts(pagination.value.page) // 更新评论计数
       message.success('回复成功')
@@ -576,7 +613,7 @@ async function handleAddComment(postId: number) {
   } catch (error) {
     console.error('Failed to add comment:', error)
   } finally {
-    commenting.value[postId] = false
+    commenting.value[key] = false
   }
 }
 
