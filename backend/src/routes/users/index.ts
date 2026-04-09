@@ -24,11 +24,10 @@ export default async function usersRouter(fastify: FastifyInstance) {
   // GET /users/:id - 获取单个用户（包含统计信息）
   fastify.get(
     '/:id',
-    { onRequest: verifyToken },
     async (req: any, reply: any) => {
       try {
         const id = parseInt(req.params.id as string, 10)
-        // Use getProfile to include stats and exclude sensitive data
+        // Public profile: getProfile to include stats and exclude sensitive data
         const user = await userService.getProfile(id)
         return { success: true, data: user }
       } catch (error: any) {

@@ -114,6 +114,11 @@ function handleMenuClick(key: string) {
 
 const userMenuOptions = [
   {
+    label: '个人资料',
+    key: 'profile',
+    icon: renderIcon('person-outline')
+  },
+  {
     label: '退出登录',
     key: 'logout',
     icon: renderIcon('log-out-outline')
@@ -121,7 +126,9 @@ const userMenuOptions = [
 ]
 
 function handleUserMenuSelect(key: string) {
-  if (key === 'logout') {
+  if (key === 'profile') {
+    router.push('/profile')
+  } else if (key === 'logout') {
     userStore.clearUser()
     localStorage.removeItem('token')
     localStorage.removeItem('user')

@@ -31,7 +31,7 @@ async function main() {
   await fastify.register(dbPlugin)
 
   // Register routes
-  const authRoutes = await import('./routes/auth/login.js')
+  const authRoutes = await import('./routes/auth/index.js')
   fastify.register(authRoutes.default, { prefix: '/auth' })
 
   const usersRoutes = await import('./routes/users/index.js')

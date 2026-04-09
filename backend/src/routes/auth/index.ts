@@ -5,7 +5,7 @@ export default async function loginRoute(fastify: FastifyInstance) {
   const userService = new UserService()
 
   fastify.post(
-    '/',
+    '/login',
     {
       schema: {
         body: {

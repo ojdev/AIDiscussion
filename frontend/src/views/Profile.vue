@@ -2,7 +2,7 @@
   <n-card title="个人资料" style="max-width: 800px; margin: 24px auto;">
     <n-tabs type="line" animated>
       <!-- 我的资料 (编辑) -->
-      <n-tab-pane name="my-profile" tab="我的资料">
+      <n-tab-pane v-if="isMyProfile" name="my-profile" tab="我的资料">
         <n-form ref="formRef" :model="profile" :rules="rules" label-placement="left" label-width="auto">
           <n-form-item label="用户名" path="name">
             <n-input v-model:value="profile.name" disabled />
@@ -65,14 +65,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useUserStore } from '@/store/user'
 import { usersApi } from '@/api'
+import { useRoute } from 'vue-router'
 import type { FormInst } from 'naive-ui'
 
 const message = useMessage()
 const userStore = useUserStore()
+const route = useRoute()
 
 const formRef = ref<FormInst>()
 const saving = ref(false)
@@ -104,9 +106,16 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString('zh-CN')
 }
 
-async function loadProfile() {
+async function loadProfile(userId?: number) {
   try {
-    const res = await usersApi.getMe()
+    let res
+    if (userId) {
+      // Public profile
+      res = await usersApi.getById(userId)
+    } else {
+      // My profile
+      res = await usersApi.getMe()
+    }
     if (res.success && res.data) {
       Object.assign(profile, res.data)
     } else {
@@ -131,6 +140,8 @@ async function handleSave() {
       message.success('保存成功')
       // Update user store
       userStore.setUser(res.data, userStore.token!)
+      // Refresh profile data
+      Object.assign(profile, res.data)
     } else {
       message.error(res.error || '保存失败')
     }
@@ -141,8 +152,22 @@ async function handleSave() {
   }
 }
 
+// Determine if this is the current user's own profile
+const isMyProfile = computed(() => {
+  const routeId = route.params.id
+  if (!routeId) return true
+  const viewedId = parseInt(routeId as string, 10)
+  return viewedId === userStore.user?.id
+})
+
+// Determine which user ID to load
+const profileUserId = computed(() => {
+  const id = route.params.id
+  return id ? parseInt(id as string, 10) : undefined
+})
+
 onMounted(() => {
-  loadProfile()
+  loadProfile(profileUserId.value)
 })
 </script>
 
