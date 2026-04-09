@@ -113,20 +113,34 @@ export const usersApi = {
 }
 
 export const postsApi = {
-  getAll(page: number = 1, limit: number = 20) {
-    return unwrap<any>(api.get('/posts', { params: { page, limit } }))
+  getAll(page: number = 1, limit: number = 20, tagId?: number) {
+    const params: any = { page, limit }
+    if (tagId !== undefined) params.tagId = tagId
+    return unwrap<any>(api.get('/posts', { params }))
   },
   getById(id: number) {
     return unwrap<any>(api.get(`/posts/${id}`))
   },
-  create(content: string) {
-    return unwrap<any>(api.post('/posts', { content }))
+  create(content: string, tagIds?: number[]) {
+    return unwrap<any>(api.post('/posts', { content, tagIds }))
   },
   delete(id: number) {
     return unwrap<any>(api.delete(`/posts/${id}`))
   },
-  update(id: number, content: string) {
-    return unwrap<any>(api.put(`/posts/${id}`, { content }))
+  update(id: number, content: string, tagIds?: number[]) {
+    return unwrap<any>(api.put(`/posts/${id}`, { content, tagIds }))
+  }
+}
+
+export const tagsApi = {
+  getAll() {
+    return unwrap<any[]>(api.get('/tags'))
+  },
+  create(name: string, color?: string) {
+    return unwrap<any>(api.post('/tags', { name, color }))
+  },
+  delete(id: number) {
+    return unwrap<any>(api.delete(`/tags/${id}`))
   }
 }
 
@@ -148,6 +162,21 @@ export const commentsApi = {
 export const searchApi = {
   search(query: string, type: 'post' | 'comment' | 'all' = 'all', page: number = 1, limit: number = 20) {
     return unwrap<any>(api.post('/search', { query, type, page, limit }))
+  }
+}
+
+export const followsApi = {
+  toggleFollow(userId: number) {
+    return unwrap<{ following: boolean; followingCount: number; followerCount: number }>(api.post(`/users/${userId}/follow`, {}))
+  },
+  getFollowing(userId: number) {
+    return unwrap<Array<{ id: number; name: string; nickname?: string; avatar?: string }>>(api.get(`/users/${userId}/following`))
+  },
+  getFollowers(userId: number) {
+    return unwrap<Array<{ id: number; name: string; nickname?: string; avatar?: string }>>(api.get(`/users/${userId}/followers`))
+  },
+  checkIsFollowing(userId: number) {
+    return unwrap<{ isFollowing: boolean }>(api.get(`/users/${userId}/is-following`))
   }
 }
 

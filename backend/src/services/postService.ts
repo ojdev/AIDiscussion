@@ -10,7 +10,13 @@ export class PostService {
       prisma.post.findMany({
         include: {
           author: {
-            include: { role: true },
+            select: {
+              id: true,
+              name: true,
+              nickname: true,
+              avatar: true,
+              role: true,
+            },
           },
           _count: {
             select: { comments: true },
@@ -38,17 +44,35 @@ export class PostService {
       where: { id },
       include: {
         author: {
-          include: { role: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            avatar: true,
+            role: true,
+          },
         },
         comments: {
           include: {
             author: {
-              include: { role: true },
+              select: {
+                id: true,
+                name: true,
+                nickname: true,
+                avatar: true,
+                role: true,
+              },
             },
             replies: {
               include: {
                 author: {
-                  include: { role: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    nickname: true,
+                    avatar: true,
+                    role: true,
+                  },
                 },
               },
             },
@@ -64,7 +88,13 @@ export class PostService {
       data,
       include: {
         author: {
-          include: { role: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            avatar: true,
+            role: true,
+          },
         },
       },
     })
@@ -82,7 +112,13 @@ export class PostService {
       data: { content },
       include: {
         author: {
-          include: { role: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            avatar: true,
+            role: true,
+          },
         },
       },
     })

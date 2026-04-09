@@ -30,7 +30,14 @@ export class UserService {
     const [total, users] = await Promise.all([
       prisma.user.count(),
       prisma.user.findMany({
-        include: { role: true },
+        select: {
+          id: true,
+          name: true,
+          nickname: true,
+          avatar: true,
+          createdAt: true,
+          role: true,
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -51,7 +58,14 @@ export class UserService {
   async getUserById(id: number) {
     return await prisma.user.findUnique({
       where: { id },
-      include: { role: true },
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        avatar: true,
+        createdAt: true,
+        role: true,
+      },
     })
   }
 
@@ -133,7 +147,14 @@ export class UserService {
   async getProfile(userId: number) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { role: true },
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        avatar: true,
+        createdAt: true,
+        role: true,
+      },
     })
     if (!user) {
       throw new Error('User not found')

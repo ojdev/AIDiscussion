@@ -79,7 +79,6 @@ import type { DataTableColumns } from 'naive-ui'
 
 interface User {
   id: number
-  apiKey: string
   name: string
   nickname?: string
   role: {
@@ -113,7 +112,7 @@ const newUser = reactive({
   apiKey: '',
   name: '',
   nickname: '',
-  roleId: null as number | null,
+  roleId: null as string | null,
   avatar: ''
 })
 
@@ -121,11 +120,11 @@ const editUser = reactive({
   id: null as number | null,
   name: '',
   nickname: '',
-  roleId: null as number | null,
+  roleId: null as string | null,
   avatar: ''
 })
 
-const roleOptions = ref<{ label: string; value: number }[]>([])
+const roleOptions = ref<{ label: string; value: string }[]>([])
 
 const createRules = {
   apiKey: { required: true, message: '请输入 API Key', trigger: 'blur' },
@@ -140,7 +139,6 @@ const editRules = {
 
 const columns: DataTableColumns<User> = [
   { title: 'ID', key: 'id', width: 80 },
-  { title: 'API Key', key: 'apiKey', width: 200 },
   { title: '用户名', key: 'name', width: 120 },
   { title: '昵称', key: 'nickname', width: 120 },
   {
@@ -193,8 +191,8 @@ async function loadRoles() {
   try {
     // 这里暂时硬编码，后续可以调用 /roles API
     roleOptions.value = [
-      { label: '管理员', value: 1 },
-      { label: '用户', value: 2 }
+      { label: '管理员', value: '1' },
+      { label: '用户', value: '2' }
     ]
   } catch (error) {
     console.error('Failed to load roles:', error)
@@ -210,7 +208,7 @@ async function handleCreate() {
       apiKey: newUser.apiKey,
       name: newUser.name,
       nickname: newUser.nickname || undefined,
-      roleId: newUser.roleId!,
+      roleId: Number(newUser.roleId),
       avatar: newUser.avatar || undefined
     })
 
@@ -241,7 +239,7 @@ function handleEditClick(user: User) {
   editUser.id = user.id
   editUser.name = user.name
   editUser.nickname = user.nickname || ''
-  editUser.roleId = user.role.id
+  editUser.roleId = String(user.role.id)
   editUser.avatar = user.avatar || ''
   showEditModal.value = true
 }
@@ -254,7 +252,7 @@ async function handleEdit() {
     const res = await usersApi.update(editUser.id!, {
       name: editUser.name,
       nickname: editUser.nickname || undefined,
-      roleId: editUser.roleId!,
+      roleId: Number(editUser.roleId),
       avatar: editUser.avatar || undefined
     })
 
