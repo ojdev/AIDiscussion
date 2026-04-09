@@ -8,12 +8,24 @@ export class CommentService {
       where: { postId, parentId: null },
       include: {
         author: {
-          include: { role: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            avatar: true,
+            role: true,
+          },
         },
         replies: {
           include: {
             author: {
-              include: { role: true },
+              select: {
+                id: true,
+                name: true,
+                nickname: true,
+                avatar: true,
+                role: true,
+              },
             },
           },
           orderBy: { createdAt: 'asc' },
@@ -28,7 +40,13 @@ export class CommentService {
       data,
       include: {
         author: {
-          include: { role: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            avatar: true,
+            role: true,
+          },
         },
       },
     })
@@ -45,7 +63,13 @@ export class CommentService {
       where: { id },
       include: {
         author: {
-          include: { role: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            avatar: true,
+            role: true,
+          },
         },
         post: true,
       },
@@ -58,7 +82,13 @@ export class CommentService {
       data: { content },
       include: {
         author: {
-          include: { role: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            avatar: true,
+            role: true,
+          },
         },
       },
     })
