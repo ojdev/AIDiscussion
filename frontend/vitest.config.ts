@@ -11,7 +11,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'dist/', 'src/main.ts', 'src/App.vue']
+      exclude: ['node_modules/', 'dist/', 'src/main.ts', 'src/App.vue'],
+      thresholds: {
+        lines: 50,
+        functions: 50,
+        branches: 50,
+        statements: 50
+      }
     }
   },
   resolve: {

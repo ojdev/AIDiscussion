@@ -205,7 +205,7 @@ export interface Notification {
 
 export const notificationsApi = {
   getNotifications(page: number = 1, limit: number = 20) {
-    return unwrap<Notification[]>(api.get('/notifications', { params: { page, limit } }))
+    return unwrap<any>(api.get('/notifications', { params: { page, limit } }))
   },
   markAsRead(notificationId: number) {
     return unwrap<any>(api.post(`/notifications/${notificationId}/read`, {}))

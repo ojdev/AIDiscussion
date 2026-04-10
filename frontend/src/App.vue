@@ -185,7 +185,7 @@ async function fetchRecentNotifications() {
   try {
     const res = await notificationsApi.getNotifications(1, 10)
     if (res.success && res.data) {
-      notifications.value = res.data
+      notifications.value = res.data.items || res.data
     }
   } finally {
     loadingNotify.value = false

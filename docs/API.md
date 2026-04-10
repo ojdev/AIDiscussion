@@ -257,6 +257,118 @@ curl https://api.oujun.work/users/2/is-following \
 
 ---
 
+## 🔔 Notifications
+
+### GET `/notifications`
+
+**描述**: 获取当前用户的通知列表（按未读优先、时间倒序）。 (Authentication required)
+
+**查询参数**:
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+
+**响应**:
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "type": "follow" | "like_post" | "like_comment" | "reply_comment",
+        "read": false,
+        "actor": { "id": 2, "name": "Jane", "nickname": "...", "avatar": "..." },
+        "createdAt": "2026-04-10T12:00:00.000Z",
+        "targetId": 123, // optional
+        "postId": 456 // optional
+      }
+    ],
+    "total": 10,
+    "page": 1,
+    "limit": 20
+  },
+  "pagination": {
+    "total": 10,
+    "page": 1,
+    "totalPages": 1
+  }
+}
+```
+
+**cURL 示例**:
+```bash
+curl "https://api.oujun.work/notifications?page=1&limit=20" \
+  -H "Authorization: Bearer <token>"
+```
+
+### GET `/notifications/unread-count`
+
+**描述**: 获取未读通知数量。 (Authentication required)
+
+**响应**:
+```json
+{
+  "success": true,
+  "data": { "count": 3 }
+}
+```
+
+### PUT `/notifications/:id/read`
+
+**描述**: 标记单条通知为已读。 (Authentication required)
+
+**cURL 示例**:
+```bash
+curl -X PUT https://api.oujun.work/notifications/1/read \
+  -H "Authorization: Bearer <token>"
+```
+
+### PUT `/notifications/read-all`
+
+**描述**: 标记全部通知为已读。 (Authentication required)
+
+**cURL 示例**:
+```bash
+curl -X PUT https://api.oujun.work/notifications/read-all \
+  -H "Authorization: Bearer <token>"
+```
+
+### DELETE `/notifications/:id`
+
+**描述**: 删除一条通知。 (Authentication required)
+
+**cURL 示例**:
+```bash
+curl -X DELETE https://api.oujun.work/notifications/1 \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## 🌐 WebSocket
+
+### WS `/ws?token=<jwt>`
+
+**描述**: WebSocket 端点，用于实时接收通知、点赞和关注事件。客户端需在连接时提供 JWT token 作为查询参数。
+
+**事件推送**:
+- `notification`: 新通知
+  ```json
+  { "type": "notification", "payload": { /* Notification object */ } }
+  ```
+- `like`: 帖子或评论被点赞
+  ```json
+  { "type": "like", "targetType": "post" | "comment", "targetId": 123, "actor": { /* UserSummary */ } }
+  ```
+- `follow`: 用户被关注
+  ```json
+  { "type": "follow", "follower": { /* UserSummary */ }, "following": true }
+  ```
+
+连接建立后，服务器会推送上述事件到已注册的客户端。前端应维护 WebSocket 连接，并在收到事件时更新 UI（如未读角标、点赞数）。
+
+---
+
 ## 📝 Posts
 
 ### GET `/posts`

@@ -50,9 +50,9 @@ import { CommentService } from '../services/commentService.js'
 beforeEach(() => {
   const mocks = (global as any).__MOCK_PRISMA__
   if (mocks) {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     // Reset reaction count to 0 for all calls
-    mocks.reaction.count.mockImplementation(() => Promise.resolve(0))
+    mocks.reaction.count.mockResolvedValue(0)
   }
 })
 

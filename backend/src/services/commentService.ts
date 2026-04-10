@@ -75,6 +75,20 @@ export class CommentService {
       },
     })
 
+    // Create reply notification if this is a reply to another comment
+    if (data.parentId) {
+      const parent = await prisma.comment.findUnique({ where: { id: data.parentId }, select: { authorId: true } })
+      if (parent && parent.authorId !== data.authorId) {
+        await notificationService.createNotification({
+          receiverId: parent.authorId,
+          type: 'reply_comment',
+          actorId: data.authorId,
+          targetId: comment.id,
+          postId: data.postId
+        })
+      }
+    }
+
     if (tagIds && tagIds.length > 0) {
       await prisma.comment.update({
         where: { id: comment.id },
@@ -125,6 +139,7 @@ export class CommentService {
           },
         },
         post: true,
+        tags: true,
       },
     })
     if (comment) {
@@ -150,6 +165,7 @@ export class CommentService {
             role: true,
           },
         },
+        tags: true,
       },
     })
   }

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { wsService } from './wsService.js'
+import { NotificationService } from './notificationService.js'
 
 const prisma = new PrismaClient()
 
@@ -16,6 +17,7 @@ export interface UserSummary {
   avatar?: string
   role: string
 }
+
 
 export class FollowService {
   async toggleFollow(currentUserId: number, targetUserId: number): Promise<FollowResponse> {
@@ -71,6 +73,8 @@ export class FollowService {
       select: { id: true, name: true, nickname: true, avatar: true, role: { select: { name: true } } }
     })
 
+    const notificationService = new NotificationService()
+
     // Broadcast follow event to target user
     if (actor) {
       wsService.broadcastToUser(targetUserId, {
@@ -84,6 +88,16 @@ export class FollowService {
         },
         following: !existingFollow
       })
+
+      // Create a persistent notification for the new follow
+      if (!existingFollow) {
+        // Create follow notification for target user
+        await notificationService.createNotification({
+          receiverId: targetUserId,
+          type: 'follow',
+          actorId: currentUserId
+        })
+      }
     }
 
     return {
