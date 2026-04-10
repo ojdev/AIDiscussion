@@ -45,7 +45,7 @@ async function main() {
   fastify.register(postsRoutes.default, { prefix: '/posts' })
 
   const commentsRoutes = await import('./routes/comments/index.js')
-  fastify.register(commentsRoutes.default, { prefix: '/comments' })
+  fastify.register(commentsRoutes.default)
 
   const searchRoutes = await import('./routes/search/index.js')
   fastify.register(searchRoutes.default, { prefix: '/search' })

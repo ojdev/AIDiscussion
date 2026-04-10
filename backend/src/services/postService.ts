@@ -139,24 +139,21 @@ export class PostService {
   }
 
   async updatePost(id: number, content: string, tagIds?: number[]) {
-    const updateData: any = { content }
-
     // If tagIds provided, update tags relation
     if (tagIds !== undefined) {
-      // First set tags to empty (delete all existing connections)
-      await prisma.post.update({
-        where: { id },
-        data: {
-          tags: { disconnect: {}}, // clear all
-        },
-      })
-      // Then connect new tags
-      if (tagIds.length > 0) {
+      if (tagIds.length === 0) {
+        // Clear all tags
+        await prisma.post.update({
+          where: { id },
+          data: { tags: { set: [] } }
+        })
+      } else {
+        // Set tags to the provided list
         await prisma.post.update({
           where: { id },
           data: {
             tags: {
-              connect: tagIds.map(id => ({ id })),
+              set: tagIds.map(id => ({ id })),
             },
           },
         })

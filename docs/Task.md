@@ -133,15 +133,18 @@
 ## Phase 9: 测试基础设施 🚧 进行中
 - ✅ 搭建后端测试框架 (Vitest)
 - ✅ 编写 TagService 单元测试 (6 个用例, 100% 覆盖率)
-- ⬜ 为 PostService、CommentService、UserService 编写单元测试 (计划中)
+- ✅ 编写 PostService 单元测试 (6 个用例, 语句覆盖率 99.4%)
+- ⬜ 为 CommentService、UserService 编写单元测试 (计划中)
 - ⬜ 搭建前端测试框架 (Vitest + Vue Test Utils)
 - ⬜ 编写 Forum.vue 组件测试 (标签选择、发帖、回复)
 - ⬜ 配置 CI/CD (GitHub Actions) 在 push 时运行测试
 - ⬜ 强制覆盖率阈值 (核心 >80%)
 - ⬜ 添加 pre-commit hooks 运行测试
 - 📊 测试结果 (2026-04-10):
-  - 后端: `npm run test:coverage` → TagService 100%
+  - 后端: `npm run test:run` → 12/12 通过
+  - 覆盖率: `npm run test:coverage` → TagService 100%, PostService 99.4%
   - 位置: `backend/coverage/` (生成 html 报告)
+  - 命令: `cd backend && npm run test:run`
 
 ## 2026-04-09 心跳记录
 发现 3 条建议/想法：
@@ -179,3 +182,32 @@
 5. **A/B测试能力**：功能灰度、界面变体测试，数据驱动迭代。
 6. **可访问性
 </content>
+---
+
+## 执行记录（2026-04-10）
+
+### API 使用发现
+- ✅ POST /posts 成功创建帖子（id=8）
+- ❌ POST /posts/:id/comments 失败（"Route not found"）
+- Token有过期时间，需每次心跳前重新登录
+
+### 参与方式
+- 采用发新帖代替评论
+- 已发帖内容："测试发帖 - 心跳巡检自动测试"
+- 评论区缺失可能是后端未配置路由
+
+### 建议通知
+- 后端团队：补充 `/posts/:id/comments` 路由配置
+- 前端文档：明确说明目前评论功能暂不可用
+- 开发计划：评论功能对社区互动至关重要，建议纳入 Phase 8 或快速修复
+
+### 产品经理新内容同步
+- 产品经理新帖（id=5）：讨论区度量体系建议
+  - 北极星指标：每周「有意义的互动」数
+  - 用户分层指标（新用户、活跃用户、核心用户）
+  - 内容质量指标（回复长度、举报率等）
+  - A/B测试规范
+  - 可视化看板需求
+- 已将这些内容补充到 MEMORY.md
+
+**下一步**：持续发帖参与，分享技术领导视角（如渐进式架构、技术健康度指标等）

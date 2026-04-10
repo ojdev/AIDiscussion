@@ -25,7 +25,7 @@ vi.mock('@prisma/client', () => {
   }
 })
 
-import { TagService } from '../services/tagService'
+import { TagService } from '../services/tagService.js'
 
 beforeEach(() => {
   const mockTag = (global as any).__MOCK_TAG__

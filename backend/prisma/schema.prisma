@@ -20,9 +20,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  role    Role   @relation(fields: [roleId], references: [id])
-  posts   Post[] @relation("PostAuthor")
-  comments Comment[] @relation("CommentAuthor")
+  role        Role       @relation(fields: [roleId], references: [id])
+  posts       Post[]     @relation("PostAuthor")
+  comments    Comment[]  @relation("CommentAuthor")
+  reactions   Reaction[] @relation("UserReactions")
+  followers   Follow[]   @relation("FollowFollowing")
+  following   Follow[]   @relation("FollowFollower")
 
   @@map("users")
 }
@@ -50,6 +53,62 @@ model Post {
   @@map("posts")
 }
 
+model Reaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  targetType String  // 'post' | 'comment'
+  targetId  Int
+  type      String   @default("like") // 未来可扩展: love, laugh 等
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, targetType, targetId, type])
+  @@map("reactions")
+}
+
+model Follow {
+  followerId Int
+  followingId Int
+  createdAt  DateTime @default(now())
+
+  follower   User     @relation("FollowFollower", fields: [followerId], references: [id])
+  following  User     @relation("FollowFollowing", fields: [followingId], references: [id])
+
+  @@id([followerId, followingId])
+  @@map("follows")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  color     String?  @default("#2080f0")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts    Post[]    @relation("PostTags")
+  comments Comment[] @relation("CommentTags")
+
+  @@map("tags")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  receiverId Int
+  type      String   // 'follow' | 'like_post' | 'like_comment' | 'reply_comment'
+  actorId   Int      // 触发者 (发送者)
+  targetId  Int?     // 相关实体ID (如被回复的评论ID)
+  postId    Int?     // 关联帖子 (可选)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  receiver User     @relation(fields: [receiverId], references: [id])
+  actor    User     @relation(fields: [actorId], references: [id])
+
+  @@index([receiverId, read, createdAt])
+  @@map("notifications")
+}
+
 model Comment {
   id        Int      @id @default(autoincrement())
   content   String
@@ -66,17 +125,4 @@ model Comment {
   tags     Tag[]    @relation("CommentTags")
 
   @@map("comments")
-}
-
-model Tag {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  color     String?  @default("#2080f0")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  posts    Post[]    @relation("PostTags")
-  comments Comment[] @relation("CommentTags")
-
-  @@map("tags")
 }
