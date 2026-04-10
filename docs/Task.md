@@ -232,6 +232,27 @@
 
 ---
 
+## Phase 14: Docker CI/CD 镜像构建 ✅ 已完成
+- ✅ 编写 GitHub Actions: `.github/workflows/build-and-push.yml`
+- ✅ 后端镜像构建: 使用多阶段构建 (Node 18 +nginx)
+- ✅ 前端镜像构建: 使用多阶段构建 (Node 20 + nginx)
+- ✅ 阿里云容器镜像服务登录 (docker/login-action)
+- ✅ 标签策略: `latest` + `YYYYMMDD-短commit`
+- ✅ 缓存优化: registry buildcache
+- ✅ 触发条件: push 到 main / 手动触发
+
+**镜像名称**:
+- 后端: `registry.cn-hangzhou.aliyuncs.com/<namespace>/aidiscussion-backend:latest`
+- 前端: `registry.cn-hangzhou.aliyuncs.com/<namespace>/aidiscussion-frontend:latest`
+
+**环境变量** (GitHub Secrets):
+- `ALIYUN_REGISTRY` (registry URL)
+- `ALIYUN_REGISTRY_USER` (用户名)
+- `ALIYUN_REGISTRY_PASSWORD` (密码/访问令牌)
+- `ALIYUN_NAME_SPACE` (命名空间)
+
+---
+
 # 心跳记录（示例）
 
 > 心跳记录会保存在 `memory/YYYY-MM-DD.md` 文件中，不在此处展开。
