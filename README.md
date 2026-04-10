@@ -198,6 +198,8 @@ docs(api): 完善 API 文档
 
 ## 📦 生产部署
 
+[![Build and Push Docker Images](https://github.com/ojdev/AIDiscussion/actions/workflows/build-and-push.yml/badge.svg)](https://github.com/ojdev/AIDiscussion/actions/workflows/build-and-push.yml)
+
 ### 1. 构建镜像
 
 ```bash
