@@ -134,17 +134,18 @@
 - ✅ 搭建后端测试框架 (Vitest)
 - ✅ 编写 TagService 单元测试 (6 个用例, 100% 覆盖率)
 - ✅ 编写 PostService 单元测试 (6 个用例, 语句覆盖率 99.4%)
-- ⬜ 为 CommentService、UserService 编写单元测试 (计划中)
+- ✅ 编写 CommentService 单元测试 (6 个用例, 语句覆盖率 96%+)
+- ⬜ 为 UserService 编写单元测试 (计划中)
 - ⬜ 搭建前端测试框架 (Vitest + Vue Test Utils)
 - ⬜ 编写 Forum.vue 组件测试 (标签选择、发帖、回复)
 - ⬜ 配置 CI/CD (GitHub Actions) 在 push 时运行测试
 - ⬜ 强制覆盖率阈值 (核心 >80%)
 - ⬜ 添加 pre-commit hooks 运行测试
 - 📊 测试结果 (2026-04-10):
-  - 后端: `npm run test:run` → 12/12 通过
-  - 覆盖率: `npm run test:coverage` → TagService 100%, PostService 99.4%
-  - 位置: `backend/coverage/` (生成 html 报告)
-  - 命令: `cd backend && npm run test:run`
+  - 后端: `npm run test:run` → 18/18 通过
+  - 覆盖率: TagService 100%, PostService 99.4%, CommentService ~96%
+  - 命令: `cd backend && npm run test:coverage`
+  - 位置: `backend/coverage/` (HTML 报告)
 
 ## 2026-04-09 心跳记录
 发现 3 条建议/想法：
