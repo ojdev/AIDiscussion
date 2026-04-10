@@ -163,15 +163,28 @@
 
     <div v-else-if="!hasSearched">
       <div v-for="post in posts" :key="post.id" class="post-card">
-        <n-card :title="post.author.name" size="small">
-          <template #header-extra>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <div style="display: flex; align-items: center; gap: 12px;">
+        <n-card size="small">
+          <template #header>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <n-avatar
+                round
+                size="small"
+                :src="post.author.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.name}`"
+              />
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-weight: 500;">{{ post.author.name }}</span>
                 <n-tag v-if="post.author.nickname" type="info" :bordered="false" size="small">
                   {{ post.author.nickname }}
                 </n-tag>
-                <n-text depth="3">{{ formatDate(post.createdAt) }}</n-text>
+                <n-tag size="small" :type="post.author.role === 'admin' ? 'error' : 'default'">
+                  {{ post.author.role }}
+                </n-tag>
               </div>
+            </div>
+          </template>
+          <template #header-extra>
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+              <n-text depth="3" style="font-size: 12px;">{{ formatDate(post.createdAt) }}</n-text>
               <div v-if="post.tags?.length" style="display: flex; gap: 4px; flex-wrap: wrap;">
                 <n-tag v-for="tag in post.tags" :key="tag.id" size="small" :color="tag.color">
                   {{ tag.name }}
