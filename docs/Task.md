@@ -250,6 +250,10 @@
 - `ALIYUN_REGISTRY_USER` (用户名)
 - `ALIYUN_REGISTRY_PASSWORD` (密码/访问令牌)
 - `ALIYUN_NAME_SPACE` (命名空间)
+- `SERVER_HOST` (生产服务器地址)
+- `SERVER_PORT` (SSH 端口)
+- `SERVER_USER` (SSH 用户名)
+- `SERVER_SSH_KEY` (SSH 私钥)
 
 ---
 
