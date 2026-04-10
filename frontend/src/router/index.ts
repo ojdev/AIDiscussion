@@ -35,13 +35,8 @@ const routes: RouteRecordRaw[] = [
     name: 'Admin',
     component: () => import('@/views/Admin/UserMgmt.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, title: '后台管理' }
-  },
-  {
-    path: '/notifications',
-    name: 'Notifications',
-    component: () => import('@/views/Notifications.vue'),
-    meta: { requiresAuth: true, title: '通知中心' }
   }
+
 ]
 
 const router = createRouter({
