@@ -148,16 +148,19 @@
 - ✅ 编写 UserService 单元测试 (9 个用例, 语句覆盖率 86.2%)
 - ✅ 搭建前端测试框架 (Vitest + Vue Test Utils)
 - ✅ 编写 Forum.vue 组件测试 (4 个用例, 覆盖头部、列表、标签筛选)
-- ⬜ 配置 CI/CD (GitHub Actions) 在 push 时运行测试
-- ⬜ 强制覆盖率阈值 (核心 >80%)
-- ⬜ 添加 pre-commit hooks 运行测试
+- ✅ 配置 CI/CD (GitHub Actions) 在 push 时运行测试
+- ✅ 强制覆盖率阈值 (后端 80%, 前端 50%)
+- ✅ 添加 pre-commit hooks (backend)
 
 **📊 测试结果 (2026-04-10)**:
-- 后端: `npm run test:run` → **37/37** 测试通过
-- 覆盖率: TagService 100%, PostService 98.3%, CommentService >95%, UserService 86.2%
-- 命令: `cd backend && npm run test:coverage`
-- 位置: `backend/coverage/` (HTML 报告)
-- 总测试: Tag/Post/Comment/User 4 个服务
+- 后端: `npm run test:run` → **37/37** 测试通过 (Tag/Post/Comment/User)
+- 前端: `npm run test:run` → **4/4** 测试通过 (Forum.vue)
+- 覆盖率: Tag 100%, Post 98.3%, Comment >95%, User 86.2%
+- 命令: `cd backend && npm run test:coverage` / `cd frontend && npm run test:coverage`
+- 位置: `backend/coverage/`, `frontend/coverage/` (HTML 报告)
+- 强制阈值: 后端 80% / 前端 50%
+- CI/CD: GitHub Actions (push/PR 自动运行)
+- pre-commit: backend hooks 在本地提交前运行测试
 
 ---
 
