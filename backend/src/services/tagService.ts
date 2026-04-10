@@ -15,6 +15,13 @@ export class TagService {
   }
 
   async createTag(data: { name: string; color?: string }) {
+    const existing = await prisma.tag.findUnique({
+      where: { name: data.name },
+      select: { id: true }
+    })
+    if (existing) {
+      throw new Error('标签名已存在')
+    }
     return await prisma.tag.create({
       data,
       select: {

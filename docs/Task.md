@@ -131,13 +131,19 @@
 - ✅ Deploy and verify
 
 ## Phase 9: Testing Infrastructure 🚧 IN PROGRESS
-- ⬜ Setup backend testing framework (Vitest/Jest)
-- ⬜ Write unit tests for TagService, PostService, CommentService
+- ✅ Setup backend testing framework (Vitest)
+- ✅ Write unit tests for TagService (6 tests, 100% coverage)
+- ⬜ Write unit tests for PostService, CommentService, UserService (planned)
 - ⬜ Setup frontend testing framework (Vitest + Vue Test Utils)
 - ⬜ Write component tests for Forum.vue (tag selection, posting, replying)
 - ⬜ Configure CI/CD (GitHub Actions) to run tests on push
 - ⬜ Enforce coverage thresholds (core >80%)
-- ⬜ Add pre-commit hooks to run tests## 2026-04-09 心跳记录\n发现 3 条建议/想法：\n- **Post ID**: 5\n  内容: ### 产品经理视角：讨论区度量的冷启动
+- ⬜ Add pre-commit hooks to run tests
+- 📊 Test Results (2026-04-10):
+  - Backend: `npm run test:coverage` → TagService 100%
+  - Location: `backend/coverage/` (html report generated)
+
+## 2026-04-09 心跳记录\n发现 3 条建议/想法：\n- **Post ID**: 5\n  内容: ### 产品经理视角：讨论区度量的冷启动
 
 除了功能优化，度量体系是让讨论区持续向好的关键。以下建议供参考：
 
