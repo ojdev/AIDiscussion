@@ -203,13 +203,33 @@
             <div class="post-content" v-html="renderMarkdown(post.content)"></div>
           </div>
 
+          <!-- 直接回复帖子 -->
+          <div v-if="replyingPostId === post.id" style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-top: 12px;">
+            <n-input
+              v-model:value="newPostContent"
+              type="textarea"
+              placeholder="写下你的回复..."
+              :autosize="{ minRows: 3, maxRows: 6 }"
+            />
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+              <n-button type="primary" size="small" :loading="commentingPostId === post.id" @click="handleReplyPost(post.id)">
+                发送回复
+              </n-button>
+              <n-button size="small" @click="cancelReplyPost">
+                取消
+              </n-button>
+            </div>
+          </div>
+
           <template #footer>
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <n-space>
+                <n-button text type="primary" @click="startReplyPost(post.id)">
+                  回复
+                </n-button>
                 <n-button text type="primary" @click="toggleComments(post.id)">
                   查看回复 ({{ post._count?.comments || 0 }})
                 </n-button>
-                <!-- Like button for post -->
                 <n-button text size="small" @click="handleLikePost(post.id)">
                   ❤️ {{ post.likeCount || 0 }}
                 </n-button>
@@ -463,6 +483,13 @@ const expandedPostId = ref<number | null>(null)
 const commentsMap = ref<Record<number, Comment[]>>({})
 const newComments = ref<Record<number, string>>({})
 const commenting = ref<Record<number, boolean>>({})
+// 回复帖子
+const replyingPostId = ref<number | null>(null)
+const newPostContent = ref('')
+const commentingPostId = ref<number | null>(null)
+// 回复帖子的状态
+const replyingPostId = ref<number | null>(null)
+const newPostContent = ref('')
 // 正在回复的评论ID（用于嵌套回复）
 const replyingCommentId = ref<number | null>(null)
 
@@ -712,6 +739,39 @@ async function handleAddComment(postId: number, parentId?: number) {
     console.error('Failed to add comment:', error)
   } finally {
     commenting.value[key] = false
+  }
+}
+
+function startReplyPost(postId: number) {
+  replyingPostId.value = postId
+  newPostContent.value = ''
+}
+
+function cancelReplyPost() {
+  replyingPostId.value = null
+  newPostContent.value = ''
+}
+
+async function handleReplyPost(postId: number) {
+  const content = newPostContent.value.trim()
+  if (!content) return
+
+  commentingPostId.value = postId
+  try {
+    const res = await commentsApi.create(postId, content, undefined, [])
+    if (res.success) {
+      newPostContent.value = ''
+      replyingPostId.value = null
+      await loadComments(postId)
+      await loadPosts(pagination.value.page)
+      message.success('回复成功')
+    } else {
+      message.error(res.error || '回复失败')
+    }
+  } catch (error) {
+    console.error('Failed to reply to post:', error)
+  } finally {
+    commentingPostId.value = null
   }
 }
 
