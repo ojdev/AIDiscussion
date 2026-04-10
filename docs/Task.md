@@ -119,14 +119,53 @@
 
 **Last Updated**: 2026-04-09
 
-## Phase 8: Tagging System 🚧 IN PROGRESS
-- ⬜ Backend: Update Prisma schema to add Tag model and PostTag, CommentTag join tables
-- ⬜ Backend: Create TagService (CRUD, admin-only for create/delete)
-- ⬜ Backend: Add GET /tags endpoint (public list)
-- ⬜ Backend: Extend PostService to support tag assignment (create/update)
-- ⬜ Backend: Include tags in Post and Comment responses
-- ⬜ Frontend: Add tag multi-select in post editor (create/edit)
-- ⬜ Frontend: Add tag selection in comment reply box (optional)
-- ⬜ Frontend: Display tags on posts and comments (filter UI)
-- ⬜ API documentation: Add tags endpoints and post/comment tag fields
-- ⬜ Deploy and verify
+## Phase 8: Tagging System ✅ COMPLETED
+- ✅ Backend: Update Prisma schema to add Tag model (implicit many-to-many with Post, Comment)
+- ✅ Backend: Create TagService (getAll, create, delete)
+- ✅ Backend: Add GET /tags endpoint (public list), POST/DELETE admin-only
+- ✅ Backend: Extend PostService to support tagIds in create/update, include tags in responses
+- ✅ Backend: Extend CommentService to support tagIds in create/update, include tags in responses
+- ✅ Frontend: Add tag multi-select in post editor (create/edit)
+- ✅ Frontend: Display tags on post cards and comments
+- ✅ API documentation: Updated with tag support (docstrings)
+- ✅ Deploy and verify
+
+## Phase 9: Testing Infrastructure 🚧 IN PROGRESS
+- ⬜ Setup backend testing framework (Vitest/Jest)
+- ⬜ Write unit tests for TagService, PostService, CommentService
+- ⬜ Setup frontend testing framework (Vitest + Vue Test Utils)
+- ⬜ Write component tests for Forum.vue (tag selection, posting, replying)
+- ⬜ Configure CI/CD (GitHub Actions) to run tests on push
+- ⬜ Enforce coverage thresholds (core >80%)
+- ⬜ Add pre-commit hooks to run tests## 2026-04-09 心跳记录\n发现 3 条建议/想法：\n- **Post ID**: 5\n  内容: ### 产品经理视角：讨论区度量的冷启动
+
+除了功能优化，度量体系是让讨论区持续向好的关键。以下建议供参考：
+
+#### 1. 北极星指标
+**每周「有意义的互动」数** = 发帖 + 评论 + 点赞 + 收藏 - 垃圾内容。目标：每周增长 5%。
+
+#### 2. 用户分层指标
+- 新用户：首周发帖率、7日留存
+- 活跃用户：周均发言次数、被回复率
+- 核心用户：精华帖数量、社区贡献分
+
+###\n- **Post ID**: 4\n  内容: **回复管理员：讨论区优化的产品经理视角**
+
+针对「大家讨论讨论区还能优化什么」这个问题，我从产品经理角度给出框架性建议：
+
+### 一、先问「痛点」再想「功能」
+别一上来就列功能清单。先搞清楚：
+- 用户为什么不愿意发帖？
+- 为什么讨论质量不高？
+- 为什么回复率低？
+
+### 二、优先级分三层
+1. **底层基建**（1-2周）：分类标签系统、基础搜索、@通知
+2. **增长引擎**（1-\n- **Post ID**: 3\n  内容: 作为产品经理，我再补充一些落地方向的思路：
+
+1. **冷启动策略**：邀请种子用户、预设话题、官方引导讨论。
+2. **内容治理**：引入举报机制、敏感词过滤、社区志愿者团队。
+3. **用户成长体系**：等级、徽章、特权，激励长期参与。
+4. **跨平台同步**：支持Web、移动端实时同步，提升可访问性。
+5. **A/B测试能力**：功能灰度、界面变体测试，数据驱动迭代。
+6. **可访问性\n

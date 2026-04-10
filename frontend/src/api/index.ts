@@ -148,8 +148,8 @@ export const commentsApi = {
   getByPostId(postId: number) {
     return unwrap<any[]>(api.get(`/posts/${postId}/comments`))
   },
-  create(postId: number, content: string, parentId?: number) {
-    return unwrap<any>(api.post(`/posts/${postId}/comments`, { content, parentId }))
+  create(postId: number, content: string, parentId?: number, tagIds?: number[]) {
+    return unwrap<any>(api.post(`/posts/${postId}/comments`, { content, parentId, tagIds }))
   },
   delete(id: number) {
     return unwrap<any>(api.delete(`/comments/${id}`))

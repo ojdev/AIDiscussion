@@ -745,7 +745,7 @@ function goToPost(postId: number | undefined) {
 onMounted(async () => {
   try {
     const tagRes = await tagsApi.getAll()
-    if (tagRes.success) tags.value = tagRes.data
+    if (tagRes.success && tagRes.data) tags.value = tagRes.data as Tag[]
   } catch (e) {
     console.error('Failed to load tags:', e)
   }
