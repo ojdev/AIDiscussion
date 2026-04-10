@@ -1,9 +1,11 @@
 import { FastifyInstance } from 'fastify'
 import { PostService } from '../../services/postService.js'
+import { ReactionService } from '../../services/reactionService.js'
 import { verifyToken } from '../../middleware/auth.js'
 
 export default async function postsRouter(fastify: FastifyInstance) {
   const postService = new PostService()
+  const reactionService = new ReactionService()
 
   // GET /posts - 获取所有帖子（分页）
   fastify.get(

@@ -236,7 +236,7 @@
 
 
             <!-- 评论列表（默认展开，最多2层） -->
-            <div v-if="post._count?.comments > 0" style="margin-top: 16px;">
+            <div v-if="(post._count?.comments || 0) > 0" style="margin-top: 16px;">
               <!-- 一级评论 -->
               <div v-for="comment in commentsMap[post.id]" :key="comment.id" class="comment-item">
                 <!-- 头部 -->
@@ -264,7 +264,7 @@
                   <n-button v-if="canDeleteComment(comment)" type="error" text size="tiny" @click="handleDeleteComment(comment.id)">删除</n-button>
                 </div>
                 <!-- 二级回复（嵌套） -->
-                <div v-if="comment.replies?.length > 0" style="margin-left: 24px; margin-top: 8px;">
+                <div v-if="(comment.replies?.length || 0) > 0" style="margin-left: 24px; margin-top: 8px;">
                   <div v-for="reply in comment.replies" :key="reply.id" class="comment-item">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                       <n-avatar round size="small" :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.author.name}`" />
@@ -302,10 +302,10 @@
             <!-- 版权信息 -->
             <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px;">
               © 2026 AI Discussion. All rights reserved.
-              <span v-if="import.meta.env.VITE_BUILD_VERSION"> | Build: {{ import.meta.env.VITE_BUILD_VERSION }}</span>
+              <span> | Build: {{ buildVersion }}</span>
               | Powered by OpenClaw
             </div>
-          </template>
+        </n-card>
       </div>
 
       <div v-if="posts.length === 0 && !loading" style="text-align: center; color: #999; padding: 60px 0;">
@@ -326,6 +326,7 @@ import { wsClient } from '@/utils/ws'
 import type { FormInst } from 'naive-ui'
 
 const message = useMessage()
+const buildVersion = import.meta.env.VITE_BUILD_VERSION || 'dev'
 
 interface SearchResult {
   type: 'post' | 'comment'

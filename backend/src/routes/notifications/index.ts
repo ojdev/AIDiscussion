@@ -5,7 +5,7 @@ import { verifyToken } from '../../middleware/auth.js'
 export default async function notificationsRouter(fastify: FastifyInstance) {
   const notificationService = new NotificationService()
 
-  // GET /notifications - 获取通知列表
+  // GET /notifications - 获取当前用户的通知（分页）
   fastify.get(
     '/',
     { onRequest: verifyToken },
@@ -17,7 +17,7 @@ export default async function notificationsRouter(fastify: FastifyInstance) {
         }
 
         const page = parseInt(req.query.page as string) || 1
-        const limit = parseInt(req.query.limit as string) || 50
+        const limit = parseInt(req.query.limit as string) || 20
         const offset = (page - 1) * limit
 
         const result = await notificationService.getNotifications(userId, limit, offset)
@@ -28,27 +28,8 @@ export default async function notificationsRouter(fastify: FastifyInstance) {
     }
   )
 
-  // GET /notifications/unread-count - 获取未读数量
-  fastify.get(
-    '/unread-count',
-    { onRequest: verifyToken },
-    async (req: any, reply: any) => {
-      try {
-        const userId = req.user?.userId
-        if (!userId) {
-          return reply.code(401).send({ success: false, error: 'Unauthorized' })
-        }
-
-        const count = await notificationService.getUnreadCount(userId)
-        return { success: true, data: { unreadCount: count } }
-      } catch (error: any) {
-        return reply.code(500).send({ success: false, error: error.message })
-      }
-    }
-  )
-
-  // PUT /notifications/:id/read - 标记单条为已读
-  fastify.put(
+  // POST /notifications/:id/read - 标记单个通知为已读
+  fastify.post(
     '/:id/read',
     { onRequest: verifyToken },
     async (req: any, reply: any) => {
@@ -59,17 +40,19 @@ export default async function notificationsRouter(fastify: FastifyInstance) {
         }
 
         const notificationId = parseInt(req.params.id as string, 10)
-        const notification = await notificationService.markAsRead(notificationId, userId)
-        return { success: true, data: notification }
+        await notificationService.markAsRead(notificationId, userId)
+        return { success: true, message: 'Notification marked as read' }
       } catch (error: any) {
-        const status = error.message === 'Notification not found' ? 404 : 500
-        return reply.status(status).send({ success: false, error: error.message })
+        if (error.message === 'Notification not found or unauthorized') {
+          return reply.code(404).send({ success: false, error: error.message })
+        }
+        return reply.code(500).send({ success: false, error: error.message })
       }
     }
   )
 
-  // PUT /notifications/read-all - 标记全部为已读
-  fastify.put(
+  // POST /notifications/read-all - 标记所有通知为已读
+  fastify.post(
     '/read-all',
     { onRequest: verifyToken },
     async (req: any, reply: any) => {
@@ -87,9 +70,9 @@ export default async function notificationsRouter(fastify: FastifyInstance) {
     }
   )
 
-  // DELETE /notifications/:id - 删除通知
-  fastify.delete(
-    '/:id',
+  // GET /notifications/unread-count - 获取未读通知数量
+  fastify.get(
+    '/unread-count',
     { onRequest: verifyToken },
     async (req: any, reply: any) => {
       try {
@@ -98,12 +81,10 @@ export default async function notificationsRouter(fastify: FastifyInstance) {
           return reply.code(401).send({ success: false, error: 'Unauthorized' })
         }
 
-        const notificationId = parseInt(req.params.id as string, 10)
-        await notificationService.deleteNotification(notificationId, userId)
-        return { success: true, message: 'Notification deleted' }
+        const count = await notificationService.getUnreadCount(userId)
+        return { success: true, data: { count } }
       } catch (error: any) {
-        const status = error.message === 'Notification not found' ? 404 : 500
-        return reply.status(status).send({ success: false, error: error.message })
+        return reply.code(500).send({ success: false, error: error.message })
       }
     }
   )
