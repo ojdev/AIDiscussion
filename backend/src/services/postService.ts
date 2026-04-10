@@ -3,12 +3,36 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export class PostService {
-  async getAllPosts(page: number = 1, limit: number = 20) {
+  async getAllPosts(page: number = 1, limit: number = 20, tagId?: number, userId?: number, followingOnly: boolean = false) {
     const skip = (page - 1) * limit
+
+    // 构建查询条件
+    let where: any = {}
+    if (tagId) {
+      where.tags = { some: { id: tagId } }
+    }
+    if (followingOnly && userId) {
+      const follows = await prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true }
+      })
+      const followingIds = follows.map(f => f.followingId)
+      if (followingIds.length === 0) {
+        return { data: [], pagination: { page, limit, total: 0, totalPages: 0 } }
+      }
+      where.authorId = { in: followingIds }
+    }
+
     const [total, posts] = await Promise.all([
-      prisma.post.count(),
+      prisma.post.count({ where }),
       prisma.post.findMany({
-        include: {
+        where,
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+          authorId: true,
           author: {
             select: {
               id: true,
@@ -18,8 +42,11 @@ export class PostService {
               role: true,
             },
           },
+          tags: true,
           _count: {
-            select: { comments: true },
+            select: {
+              comments: true,
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -28,8 +55,18 @@ export class PostService {
       }),
     ])
 
+    // 获取每个帖子的点赞数
+    const postsWithLikes = await Promise.all(
+      posts.map(async (post) => {
+        const likeCount = await prisma.reaction.count({
+          where: { targetType: 'post', targetId: post.id, type: 'like' }
+        })
+        return { ...post, likeCount }
+      })
+    )
+
     return {
-      data: posts,
+      data: postsWithLikes,
       pagination: {
         page,
         limit,
@@ -40,9 +77,14 @@ export class PostService {
   }
 
   async getPostById(id: number) {
-    return await prisma.post.findUnique({
+    const post = await prisma.post.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+        authorId: true,
         author: {
           select: {
             id: true,
@@ -53,43 +95,34 @@ export class PostService {
           },
         },
         tags: true,
-        comments: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                nickname: true,
-                avatar: true,
-                role: true,
-              },
-            },
-            replies: {
-              include: {
-                author: {
-                  select: {
-                    id: true,
-                    name: true,
-                    nickname: true,
-                    avatar: true,
-                    role: true,
-                  },
-                },
-              },
-            },
+        _count: {
+          select: {
+            comments: true,
           },
-          orderBy: { createdAt: 'asc' },
         },
       },
     })
+
+    if (!post) return null
+
+    const likeCount = await prisma.reaction.count({
+      where: { targetType: 'post', targetId: id, type: 'like' }
+    })
+
+    return { ...post, likeCount }
   }
 
   async createPost(data: { content: string; authorId: number; tagIds?: number[] }) {
-    let { tagIds, ...postData } = data
+    const { tagIds, ...postData } = data
 
     const post = await prisma.post.create({
       data: postData,
-      include: {
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+        authorId: true,
         author: {
           select: {
             id: true,
@@ -114,7 +147,12 @@ export class PostService {
       // Reload with tags
       return await prisma.post.findUnique({
         where: { id: post.id },
-        include: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+          authorId: true,
           author: {
             select: {
               id: true,
@@ -130,12 +168,6 @@ export class PostService {
     }
 
     return post
-  }
-
-  async deletePost(id: number) {
-    return await prisma.post.delete({
-      where: { id },
-    })
   }
 
   async updatePost(id: number, content: string, tagIds?: number[]) {
@@ -162,7 +194,12 @@ export class PostService {
 
     return await prisma.post.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+        authorId: true,
         author: {
           select: {
             id: true,
@@ -174,6 +211,12 @@ export class PostService {
         },
         tags: true,
       },
+    })
+  }
+
+  async deletePost(id: number) {
+    return await prisma.post.delete({
+      where: { id },
     })
   }
 }

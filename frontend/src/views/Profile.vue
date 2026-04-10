@@ -1,6 +1,25 @@
 <template>
   <div>
     <n-card title="个人资料" style="max-width: 800px; margin: 24px auto;">
+      <!-- 关注操作区域 -->
+      <div v-if="!isMyProfile && isLoggedIn" style="margin-bottom: 16px; display: flex; align-items: center; gap: 16px;">
+        <n-button
+          :type="isFollowing ? 'success' : 'primary'"
+          :loading="followingLoading"
+          @click="handleToggleFollow"
+        >
+          {{ isFollowing ? '已关注' : '关注' }}
+        </n-button>
+        <n-space>
+          <n-text depth="3" style="cursor: pointer;" @click="showFollowingDrawer = true">
+            关注了 <strong>{{ profile.stats?.followingCount || 0 }}</strong> 人
+          </n-text>
+          <n-text depth="3" style="cursor: pointer;" @click="showFollowersDrawer = true">
+            粉丝 <strong>{{ profile.stats?.followerCount || 0 }}</strong> 人
+          </n-text>
+        </n-space>
+      </div>
+
       <n-tabs type="line" animated>
         <!-- 我的资料 (编辑) -->
         <n-tab-pane v-if="isMyProfile" name="my-profile" tab="我的资料">
@@ -133,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useMessage, type FormInst } from 'naive-ui'
 import { useUserStore } from '@/store/user'
 import { usersApi } from '@/api'
@@ -323,6 +342,19 @@ async function handleSave() {
   }
 }
 
+function handleWsFollow(event: Event) {
+  const custom = event as CustomEvent<any>
+  const data = custom.detail
+  // Only update if this profile is the current user's own profile
+  if (profile.id === userStore.user?.id) {
+    if (data.following) {
+      profile.stats.followerCount += 1
+    } else {
+      profile.stats.followerCount = Math.max(0, profile.stats.followerCount - 1)
+    }
+  }
+}
+
 // Determine if this is the current user's own profile
 const isMyProfile = computed(() => {
   const routeId = route.params.id
@@ -339,6 +371,11 @@ const profileUserId = computed(() => {
 
 onMounted(() => {
   loadProfile(profileUserId.value)
+  window.addEventListener('ws-follow', handleWsFollow)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('ws-follow', handleWsFollow)
 })
 </script>
 

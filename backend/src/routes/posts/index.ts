@@ -12,7 +12,10 @@ export default async function postsRouter(fastify: FastifyInstance) {
       try {
         const page = parseInt(req.query.page as string) || 1
         const limit = parseInt(req.query.limit as string) || 20
-        const result = await postService.getAllPosts(page, limit)
+        const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined
+        const followingOnly = req.query.followingOnly === 'true'
+        const currentUserId = req.user?.userId // may be undefined if not authenticated
+        const result = await postService.getAllPosts(page, limit, tagId, currentUserId, followingOnly)
         return { success: true, data: result.data, pagination: result.pagination }
       } catch (error: any) {
         return reply.code(500).send({ success: false, error: error.message })

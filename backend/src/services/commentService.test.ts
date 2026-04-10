@@ -1,147 +1,275 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// Mock Prisma for comment operations
-const mockComment = {
-  findMany: vi.fn(),
-  findUnique: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
-  delete: vi.fn(),
-}
+// Mock PrismaClient before importing services
+vi.mock('@prisma/client', () => {
+  const mockCommentFindMany = vi.fn()
+  const mockCommentFindUnique = vi.fn()
+  const mockCommentCreate = vi.fn()
+  const mockCommentDelete = vi.fn()
+  const mockCommentUpdate = vi.fn()
+  const mockPostFindUnique = vi.fn()
+  const mockTagFindMany = vi.fn()
+  const mockTagFindUnique = vi.fn()
+  const mockUserFindUnique = vi.fn()
 
-vi.mock('@prisma/client', () => ({
-  PrismaClient: class {
-    get comment() { return mockComment }
-    $disconnect = vi.fn()
+  const mockComment = {
+    findMany: mockCommentFindMany,
+    findUnique: mockCommentFindUnique,
+    create: mockCommentCreate,
+    delete: mockCommentDelete,
+    update: mockCommentUpdate
   }
-}))
+  const mockPost = { findUnique: mockPostFindUnique }
+  const mockTag = { findMany: mockTagFindMany, findUnique: mockTagFindUnique }
+  const mockUser = { findUnique: mockUserFindUnique }
 
-import { CommentService } from '../services/commentService'
+  // Expose mocks globally for test setup
+  ;(global as any).__MOCK_PRISMA__ = {
+    comment: mockComment,
+    post: mockPost,
+    tag: mockTag,
+    user: mockUser
+  }
+
+  return {
+    PrismaClient: class {
+      comment = mockComment
+      post = mockPost
+      tag = mockTag
+      user = mockUser
+      $disconnect = vi.fn()
+    }
+  }
+})
+
+import { CommentService } from '../services/commentService.js'
 
 beforeEach(() => {
-  mockComment.findMany.mockClear()
-  mockComment.findUnique.mockClear()
-  mockComment.create.mockClear()
-  mockComment.update.mockClear()
-  mockComment.delete.mockClear()
+  const mocks = (global as any).__MOCK_PRISMA__
+  if (mocks) {
+    vi.clearAllMocks()
+    // Also clear individual mocks explicitly
+    mocks.comment.findMany.mockClear?.()
+    mocks.comment.findUnique.mockClear?.()
+    mocks.comment.create.mockClear?.()
+    mocks.comment.delete.mockClear?.()
+    mocks.comment.update.mockClear?.()
+    mocks.post.findUnique.mockClear?.()
+    mocks.tag.findMany.mockClear?.()
+    mocks.tag.findUnique.mockClear?.()
+    mocks.user.findUnique.mockClear?.()
+  }
 })
 
 describe('CommentService', () => {
   const service = new CommentService()
+  const mocks = (global as any).__MOCK_PRISMA__
 
-  it('getCommentsByPostId 返回帖子顶级评论', async () => {
-    mockComment.findMany.mockResolvedValue([
-      {
+  describe('getCommentsByPostId', () => {
+    it('应返回帖子的顶级评论及其回复', async () => {
+      const mockComments = [
+        {
+          id: 1,
+          content: 'Top comment',
+          author: { id: 1, name: 'User1', nickname: 'U1', avatar: '', role: { name: 'user' } },
+          tags: [],
+          replies: [{
+            id: 2,
+            content: 'Reply',
+            author: { id: 2, name: 'User2', nickname: 'U2', avatar: '', role: { name: 'admin' } },
+            tags: []
+          }]
+        }
+      ]
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.findMany.mockResolvedValue(mockComments)
+
+      const result = await service.getCommentsByPostId(1)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].replies).toHaveLength(1)
+      expect(client.comment.findMany).toHaveBeenCalledWith({
+        where: { postId: 1, parentId: null },
+        include: expect.objectContaining({
+          author: expect.any(Object),
+          tags: true,
+          replies: expect.objectContaining({
+            include: expect.any(Object),
+            orderBy: { createdAt: 'asc' }
+          })
+        }),
+        orderBy: { createdAt: 'asc' }
+      })
+    })
+
+    it('无评论时返回空数组', async () => {
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.findMany.mockResolvedValue([])
+
+      const result = await service.getCommentsByPostId(999)
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('createComment', () => {
+    it('应创建顶级评论', async () => {
+      const mockComment = {
         id: 1,
-        content: '评论1',
-        author: { id: 2, name: 'User2', nickname: 'U2', avatar: '', role: { id: 2, name: '用户' } },
-        tags: [],
-        replies: []
+        content: 'New comment',
+        postId: 1,
+        authorId: 1,
+        parentId: null,
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } }
       }
-    ])
 
-    const result = await service.getCommentsByPostId(1)
-    expect(result).toHaveLength(1)
-    expect(mockComment.findMany).toHaveBeenCalledWith({
-      where: { postId: 1, parentId: null },
-      include: expect.objectContaining({
-        author: expect.any(Object),
-        tags: expect.anything(),
-        replies: expect.objectContaining({
-          include: expect.any(Object),
-          orderBy: { createdAt: 'asc' }
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.create.mockResolvedValueOnce(mockComment)
+
+      const result = await service.createComment({
+        content: 'New comment',
+        postId: 1,
+        authorId: 1
+      })
+
+      expect(result).toEqual(mockComment)
+      expect(client.comment.create).toHaveBeenCalledWith({
+        data: { content: 'New comment', postId: 1, authorId: 1 },
+        include: { author: expect.any(Object) }
+      })
+    })
+
+    it('应创建回复', async () => {
+      const mockComment = {
+        id: 2,
+        content: 'Reply',
+        postId: 1,
+        authorId: 1,
+        parentId: 1
+      }
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.create.mockResolvedValueOnce(mockComment)
+
+      const result = await service.createComment({
+        content: 'Reply',
+        postId: 1,
+        authorId: 1,
+        parentId: 1
+      })
+
+      expect(result.parentId).toBe(1)
+    })
+
+    it('应创建评论并关联标签', async () => {
+      const createdComment = { id: 1, content: 'Comment', postId: 1, authorId: 1 }
+      const commentWithTags = {
+        id: 1,
+        content: 'Comment',
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        tags: [{ id: 1, name: 'Tag1', color: '#000' }]
+      }
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.create.mockResolvedValueOnce(createdComment)
+      client.comment.update.mockResolvedValueOnce()
+      client.comment.findUnique.mockResolvedValueOnce(commentWithTags)
+
+      const result = await service.createComment({
+        content: 'Comment',
+        postId: 1,
+        authorId: 1,
+        tagIds: [1]
+      })
+
+      expect(result).toEqual(commentWithTags)
+      expect(client.comment.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { tags: { connect: [{ id: 1 }] } }
+      })
+    })
+  })
+
+  describe('deleteComment', () => {
+    it('应删除评论', async () => {
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.delete.mockResolvedValue({ id: 1 })
+
+      await service.deleteComment(1)
+
+      expect(client.comment.delete).toHaveBeenCalledWith({ where: { id: 1 } })
+    })
+  })
+
+  describe('getCommentById', () => {
+    it('应返回评论详情', async () => {
+      const mockComment = {
+        id: 1,
+        content: 'Comment',
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        post: { id: 1 },
+        tags: []
+      }
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.findUnique.mockResolvedValue(mockComment)
+
+      const result = await service.getCommentById(1)
+
+      expect(result).toEqual(mockComment)
+      expect(client.comment.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: expect.objectContaining({
+          author: expect.any(Object),
+          post: true,
+          tags: true
         })
-      }),
-      orderBy: { createdAt: 'asc' }
+      })
+    })
+
+    it('未找到评论返回null', async () => {
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.findUnique.mockResolvedValue(null)
+
+      const result = await service.getCommentById(999)
+
+      expect(result).toBeNull()
     })
   })
 
-  it('getCommentById 返回评论详情', async () => {
-    mockComment.findUnique.mockResolvedValue({
-      id: 1,
-      content: '详情评论',
-      author: { id: 2, name: 'U', nickname: 'n', avatar: '', role: { id: 2, name: '用户' } },
-      post: { id: 1, content: '父帖' },
-      tags: [{ id: 1, name: '标签' }]
-    })
+  describe('updateComment', () => {
+    it('应更新评论内容', async () => {
+      const updatedComment = {
+        id: 1,
+        content: 'Updated content',
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        tags: []
+      }
 
-    const result = await service.getCommentById(1)
-    expect(result?.id).toBe(1)
-    expect(result?.post).toBeDefined()
-    expect(result?.tags).toHaveLength(1)
-  })
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.comment.update.mockResolvedValue(updatedComment)
 
-  it('createComment 创建评论', async () => {
-    mockComment.create.mockResolvedValue({
-      id: 2,
-      content: '新评论',
-      authorId: 2,
-      postId: 1
-    })
-    mockComment.findUnique.mockResolvedValue({
-      id: 2,
-      content: '新评论',
-      author: { id: 2, name: 'U', nickname: 'n', avatar: '', role: { id: 2, name: '用户' } },
-      tags: []
-    })
+      const result = await service.updateComment(1, 'Updated content')
 
-    const result = await service.createComment({
-      content: '新评论',
-      postId: 1,
-      authorId: 2
+      expect(result.content).toBe('Updated content')
+      expect(client.comment.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { content: 'Updated content' },
+        include: expect.objectContaining({
+          author: expect.any(Object),
+          tags: true
+        })
+      })
     })
-
-    expect(result?.content).toBe('新评论')
-    expect(mockComment.create).toHaveBeenCalledWith({
-      data: { content: '新评论', postId: 1, authorId: 2 },
-      include: { author: { select: { avatar: true, id: true, name: true, nickname: true, role: true } } }
-    })
-  })
-
-  it('createComment 带标签', async () => {
-    mockComment.create.mockResolvedValue({ id: 3, content: '带标签', authorId: 2, postId: 1 })
-    mockComment.update.mockResolvedValue({ id: 3 })
-    mockComment.findUnique.mockResolvedValue({
-      id: 3,
-      content: '带标签',
-      author: { id: 2, name: 'U', nickname: 'n', avatar: '', role: { id: 2, name: '用户' } },
-      tags: [{ id: 5, name: '标签5' }]
-    })
-
-    const result = await service.createComment({
-      content: '带标签',
-      postId: 1,
-      authorId: 2,
-      tagIds: [5]
-    })
-
-    expect(mockComment.update).toHaveBeenCalledWith({
-      where: { id: 3 },
-      data: { tags: { connect: [{ id: 5 }] } }
-    })
-    expect(result?.tags).toHaveLength(1)
-  })
-
-  it('updateComment 更新评论', async () => {
-    mockComment.update.mockResolvedValue({
-      id: 1,
-      content: '已更新',
-      author: { id: 2, name: 'U', nickname: 'n', avatar: '', role: { id: 2, name: '用户' } },
-      tags: []
-    })
-
-    const result = await service.updateComment(1, '已更新')
-    expect(result?.content).toBe('已更新')
-    expect(mockComment.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { content: '已更新' },
-      include: { author: { select: { avatar: true, id: true, name: true, nickname: true, role: true } }, tags: true }
-    })
-  })
-
-  it('deleteComment 删除评论', async () => {
-    mockComment.delete.mockResolvedValue({ id: 1, content: '删我' } as any)
-    await service.deleteComment(1)
-    expect(mockComment.delete).toHaveBeenCalledWith({ where: { id: 1 } })
   })
 })

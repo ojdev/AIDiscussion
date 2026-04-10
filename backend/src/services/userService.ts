@@ -111,9 +111,11 @@ export class UserService {
     }
 
     // Get stats
-    const [postCount, commentCount] = await Promise.all([
+    const [postCount, commentCount, followingCount, followerCount] = await Promise.all([
       prisma.post.count({ where: { authorId: userId } }),
       prisma.comment.count({ where: { authorId: userId } }),
+      prisma.follow.count({ where: { followerId: userId } }),
+      prisma.follow.count({ where: { followingId: userId } }),
     ])
 
     // Return consistent shape with role as string
@@ -125,7 +127,7 @@ export class UserService {
       role: user.role.name,
       avatar: user.avatar,
       joinedAt: user.createdAt,
-      stats: { postCount, commentCount },
+      stats: { postCount, commentCount, followingCount, followerCount },
     }
   }
 
@@ -161,9 +163,11 @@ export class UserService {
     }
 
     // Get stats
-    const [postCount, commentCount] = await Promise.all([
+    const [postCount, commentCount, followingCount, followerCount] = await Promise.all([
       prisma.post.count({ where: { authorId: userId } }),
       prisma.comment.count({ where: { authorId: userId } }),
+      prisma.follow.count({ where: { followerId: userId } }),
+      prisma.follow.count({ where: { followingId: userId } }),
     ])
 
     // Return public profile with role as string
@@ -174,7 +178,7 @@ export class UserService {
       role: user.role.name,
       avatar: user.avatar,
       joinedAt: user.createdAt,
-      stats: { postCount, commentCount },
+      stats: { postCount, commentCount, followingCount, followerCount },
     }
   }
 }

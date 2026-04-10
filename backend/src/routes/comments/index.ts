@@ -45,8 +45,7 @@ export default async function commentsRouter(fastify: FastifyInstance) {
           content: req.body.content,
           postId,
           authorId,
-          parentId: req.body.parentId,
-          tagIds: req.body.tagIds
+          parentId: req.body.parentId
         })
         return { success: true, data: comment }
       } catch (error: any) {

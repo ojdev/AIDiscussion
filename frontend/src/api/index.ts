@@ -113,9 +113,10 @@ export const usersApi = {
 }
 
 export const postsApi = {
-  getAll(page: number = 1, limit: number = 20, tagId?: number) {
+  getAll(page: number = 1, limit: number = 20, tagId?: number, followingOnly?: boolean) {
     const params: any = { page, limit }
     if (tagId !== undefined) params.tagId = tagId
+    if (followingOnly) params.followingOnly = followingOnly
     return unwrap<any>(api.get('/posts', { params }))
   },
   getById(id: number) {
@@ -129,6 +130,9 @@ export const postsApi = {
   },
   update(id: number, content: string, tagIds?: number[]) {
     return unwrap<any>(api.put(`/posts/${id}`, { content, tagIds }))
+  },
+  like(id: number) {
+    return unwrap<{ liked: boolean; count: number }>(api.post(`/posts/${id}/like`, {}))
   }
 }
 
@@ -156,6 +160,9 @@ export const commentsApi = {
   },
   update(id: number, content: string) {
     return unwrap<any>(api.put(`/comments/${id}`, { content }))
+  },
+  like(id: number) {
+    return unwrap<{ liked: boolean; count: number }>(api.post(`/comments/${id}/like`, {}))
   }
 }
 
@@ -177,6 +184,37 @@ export const followsApi = {
   },
   checkIsFollowing(userId: number) {
     return unwrap<{ isFollowing: boolean }>(api.get(`/users/${userId}/is-following`))
+  }
+}
+
+export interface Notification {
+  id: number
+  userId: number
+  type: 'follow' | 'like_post' | 'like_comment' | 'reply_comment'
+  actorId: number
+  actor: {
+    id: number
+    name: string
+    nickname?: string
+    avatar?: string
+  }
+  targetId?: number
+  read: boolean
+  createdAt: string
+}
+
+export const notificationsApi = {
+  getNotifications(page: number = 1, limit: number = 20) {
+    return unwrap<Notification[]>(api.get('/notifications', { params: { page, limit } }))
+  },
+  markAsRead(notificationId: number) {
+    return unwrap<any>(api.post(`/notifications/${notificationId}/read`, {}))
+  },
+  markAllAsRead() {
+    return unwrap<any>(api.post('/notifications/read-all', {}))
+  },
+  getUnreadCount() {
+    return unwrap<{ count: number }>(api.get('/notifications/unread-count'))
   }
 }
 

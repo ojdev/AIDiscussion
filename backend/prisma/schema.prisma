@@ -24,6 +24,8 @@ model User {
   posts       Post[]     @relation("PostAuthor")
   comments    Comment[]  @relation("CommentAuthor")
   reactions   Reaction[] @relation("UserReactions")
+  receivedNotifications Notification[] @relation("NotificationRecipient")
+  sentNotifications Notification[] @relation("NotificationActor")
   followers   Follow[]   @relation("FollowFollowing")
   following   Follow[]   @relation("FollowFollower")
 
@@ -61,7 +63,7 @@ model Reaction {
   type      String   @default("like") // 未来可扩展: love, laugh 等
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation("UserReactions", fields: [userId], references: [id])
 
   @@unique([userId, targetType, targetId, type])
   @@map("reactions")
@@ -102,8 +104,8 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  receiver User     @relation(fields: [receiverId], references: [id])
-  actor    User     @relation(fields: [actorId], references: [id])
+  receiver User @relation("NotificationRecipient", fields: [receiverId], references: [id])
+  actor    User @relation("NotificationActor", fields: [actorId], references: [id])
 
   @@index([receiverId, read, createdAt])
   @@map("notifications")

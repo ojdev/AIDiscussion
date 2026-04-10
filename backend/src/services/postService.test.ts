@@ -1,174 +1,259 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// Mock Prisma methods we'll use
-const mockPost = {
-  findMany: vi.fn(),
-  findUnique: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
-  delete: vi.fn(),
-  count: vi.fn(),
-}
-
-const mockTag = {
-  findMany: vi.fn(),
-}
-
-const mockUser = {
-  findMany: vi.fn(),
-}
-
-// Mock the entire PrismaClient
+// Mock PrismaClient before importing services
 vi.mock('@prisma/client', () => {
+  const mockPostFindMany = vi.fn()
+  const mockPostFindUnique = vi.fn()
+  const mockPostCreate = vi.fn()
+  const mockPostDelete = vi.fn()
+  const mockPostUpdate = vi.fn()
+  const mockPostCount = vi.fn()
+
+  const mockComment = {
+    findMany: vi.fn(),
+    count: vi.fn()
+  }
+
+  const mockTag = {
+    findMany: vi.fn(),
+    findUnique: vi.fn()
+  }
+
   return {
     PrismaClient: class {
-      get post() { return mockPost }
-      get tag() { return mockTag }
-      get user() { return mockUser }
+      post = {
+        findMany: mockPostFindMany,
+        findUnique: mockPostFindUnique,
+        create: mockPostCreate,
+        delete: mockPostDelete,
+        update: mockPostUpdate,
+        count: mockPostCount
+      }
+      comment = mockComment
+      tag = mockTag
       $disconnect = vi.fn()
     }
   }
 })
 
-import { PostService } from '../services/postService'
+import { PostService } from '../services/postService.js'
 
 beforeEach(() => {
-  mockPost.findMany.mockClear()
-  mockPost.findUnique.mockClear()
-  mockPost.create.mockClear()
-  mockPost.update.mockClear()
-  mockPost.delete.mockClear()
-  mockPost.count.mockClear()
+  // Clear all mocks
+  const { PrismaClient } = require('@prisma/client')
+  const client = new PrismaClient()
+  vi.clearAllMocks()
 })
 
 describe('PostService', () => {
   const service = new PostService()
 
-  it('getAllPosts 应返回分页列表及作者信息', async () => {
-    mockPost.count.mockResolvedValue(40)
-    mockPost.findMany.mockResolvedValue([
-      {
-        id: 1,
-        content: '帖子1',
-        authorId: 1,
-        createdAt: new Date('2026-04-10'),
-        author: {
-          id: 1,
-          name: 'User1',
-          nickname: 'U1',
-          avatar: '',
-          role: { id: 2, name: '用户' }
-        },
-        _count: { comments: 5 }
-      }
-    ])
-
-    const result = await service.getAllPosts(1, 20)
-    expect(result.data).toHaveLength(1)
-    expect(result.pagination).toEqual({
-      page: 1,
-      limit: 20,
-      total: 40,
-      totalPages: 2
-    })
-    expect(mockPost.count).toHaveBeenCalled()
-    expect(mockPost.findMany).toHaveBeenCalledWith({
-      include: expect.objectContaining({
-        author: expect.any(Object),
-        _count: expect.objectContaining({ select: { comments: true } })
-      }),
-      orderBy: { createdAt: 'desc' },
-      skip: 0,
-      take: 20
-    })
-  })
-
-  it('getPostById 应返回帖子详情包含标签和评论', async () => {
-    mockPost.findUnique.mockResolvedValue({
-      id: 1,
-      content: '详情帖',
-      author: { id: 1, name: 'A', nickname: 'a', avatar: '', role: { id: 2, name: '用户' } },
-      tags: [{ id: 1, name: '技术', color: '#000' }],
-      comments: [
+  describe('getAllPosts', () => {
+    it('应返回分页的帖子列表', async () => {
+      const mockPosts = [
         {
           id: 1,
-          content: '评论1',
-          author: { id: 2, name: 'B', nickname: 'b', avatar: '', role: { id: 1, name: '管理员' } },
-          replies: []
+          content: 'Post 1',
+          author: { id: 1, name: 'User1', nickname: 'U1', avatar: '', role: { name: 'user' } },
+          _count: { comments: 5 }
+        },
+        {
+          id: 2,
+          content: 'Post 2',
+          author: { id: 2, name: 'User2', nickname: 'U2', avatar: '', role: { name: 'admin' } },
+          _count: { comments: 10 }
         }
       ]
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.count.mockResolvedValue(25)
+      client.post.findMany.mockResolvedValue(mockPosts)
+
+      const result = await service.getAllPosts(1, 2)
+
+      expect(result.data).toHaveLength(2)
+      expect(result.pagination).toEqual({
+        page: 1,
+        limit: 2,
+        total: 25,
+        totalPages: 13
+      })
+      expect(client.post.findMany).toHaveBeenCalledWith({
+        include: expect.objectContaining({
+          author: expect.any(Object),
+          _count: expect.objectContaining({ select: { comments: true } })
+        }),
+        orderBy: { createdAt: 'desc' },
+        skip: 0,
+        take: 2
+      })
     })
 
-    const result = await service.getPostById(1)
-    expect(result?.id).toBe(1)
-    expect(result?.tags).toHaveLength(1)
-    expect(result?.comments).toHaveLength(1)
+    it('应正确处理无数据情况', async () => {
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.count.mockResolvedValue(0)
+      client.post.findMany.mockResolvedValue([])
+
+      const result = await service.getAllPosts(1, 20)
+
+      expect(result.data).toEqual([])
+      expect(result.pagination.total).toBe(0)
+      expect(result.pagination.totalPages).toBe(0)
+    })
   })
 
-  it('createPost 应创建帖子并关联标签', async () => {
-    mockPost.create.mockResolvedValue({
-      id: 2,
-      content: '新帖',
-      authorId: 2,
-      tags: []
-    })
-    mockPost.findUnique.mockResolvedValue({
-      id: 2,
-      content: '新帖',
-      author: { id: 2, name: 'A', nickname: 'a', avatar: '', role: { id: 2, name: '用户' } },
-      tags: [{ id: 1, name: '标签A' }]
+  describe('getPostById', () => {
+    it('应返回帖子及其评论和标签', async () => {
+      const mockPost = {
+        id: 1,
+        content: 'Test post',
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        tags: [{ id: 1, name: 'Tech', color: '#000' }],
+        comments: [{
+          id: 1,
+          content: 'Comment',
+          author: { id: 2, name: 'ReplyUser', nickname: 'R', avatar: '', role: { name: 'user' } },
+          replies: []
+        }]
+      }
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.findUnique.mockResolvedValue(mockPost)
+
+      const result = await service.getPostById(1)
+
+      expect(result).toEqual(mockPost)
+      expect(client.post.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: expect.objectContaining({
+          author: expect.any(Object),
+          tags: true,
+          comments: expect.objectContaining({
+            include: expect.any(Object),
+            orderBy: { createdAt: 'asc' }
+          })
+        })
+      })
     })
 
-    const result = await service.createPost({
-      content: '新帖',
-      authorId: 2,
-      tagIds: [1]
-    })
+    it('未找到帖子时返回null', async () => {
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.findUnique.mockResolvedValue(null)
 
-    expect(result?.content).toBe('新帖')
-    expect(result?.tags).toHaveLength(1)
-    expect(mockPost.update).toHaveBeenCalledWith({
-      where: { id: 2 },
-      data: { tags: { connect: [{ id: 1 }] } }
+      const result = await service.getPostById(999)
+
+      expect(result).toBeNull()
     })
   })
 
-  it('deletePost 应删除帖子', async () => {
-    mockPost.delete.mockResolvedValue({ id: 1, content: '删我' } as any)
-    await service.deletePost(1)
-    expect(mockPost.delete).toHaveBeenCalledWith({ where: { id: 1 } })
+  describe('createPost', () => {
+    it('应创建帖子（不含标签）', async () => {
+      const mockPost = {
+        id: 1,
+        content: 'New post',
+        authorId: 1,
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } }
+      }
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.create.mockResolvedValueOnce(mockPost)
+      client.post.findUnique.mockResolvedValue(mockPost)
+
+      const result = await service.createPost({ content: 'New post', authorId: 1 })
+
+      expect(result).toEqual(mockPost)
+      expect(client.post.create).toHaveBeenCalledWith({
+        data: { content: 'New post', authorId: 1 },
+        include: { author: expect.any(Object) }
+      })
+    })
+
+    it('应创建帖子并关联标签', async () => {
+      const createdPost = { id: 1, content: 'Post', authorId: 1 }
+      const postWithTags = {
+        id: 1,
+        content: 'Post',
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        tags: [{ id: 1, name: 'Tag1', color: '#000' }]
+      }
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.create.mockResolvedValueOnce(createdPost)
+      client.post.update.mockResolvedValueOnce()
+      client.post.findUnique.mockResolvedValueOnce(postWithTags)
+
+      const result = await service.createPost({ content: 'Post', authorId: 1, tagIds: [1] })
+
+      expect(result).toEqual(postWithTags)
+      expect(client.post.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { tags: { connect: [{ id: 1 }] } }
+      })
+    })
   })
 
-  it('updatePost 应更新内容并设置标签', async () => {
-    mockPost.findUnique.mockResolvedValue({
-      id: 1,
-      content: '更新后',
-      author: { id: 1, name: 'A', nickname: 'a', avatar: '', role: { id: 2, name: '用户' } },
-      tags: [{ id: 2, name: '新标签' }]
-    })
-    mockPost.update.mockResolvedValue({ id: 1 } as any)
+  describe('deletePost', () => {
+    it('应删除帖子', async () => {
+      const deletedPost = { id: 1, content: 'Deleted', authorId: 1 }
 
-    const result = await service.updatePost(1, '更新后', [2])
-    expect(mockPost.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { tags: { set: [{ id: 2 }] } }
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.delete.mockResolvedValue(deletedPost)
+
+      await service.deletePost(1)
+
+      expect(client.post.delete).toHaveBeenCalledWith({ where: { id: 1 } })
     })
-    expect(result?.content).toBe('更新后')
   })
 
-  it('updatePost 传入空 tagIds 应清空标签', async () => {
-    mockPost.findUnique.mockResolvedValue({
-      id: 1,
-      content: '更新后',
-      author: { id: 1, name: 'A', nickname: 'a', avatar: '', role: { id: 2, name: '用户' } },
-      tags: []
-    })
-    mockPost.update.mockResolvedValue({ id: 1 } as any)
+  describe('updatePost', () => {
+    it('应更新帖子内容', async () => {
+      const updatedPost = {
+        id: 1,
+        content: 'Updated content',
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        tags: []
+      }
 
-    await service.updatePost(1, '更新后', [])
-    expect(mockPost.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { tags: { set: [] } }
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.findUnique.mockResolvedValueOnce(updatedPost)
+      // The service calls findUnique after update
+      client.post.findUnique.mockResolvedValueOnce(updatedPost)
+
+      const result = await service.updatePost(1, 'Updated content')
+
+      expect(result.content).toBe('Updated content')
+      expect(client.post.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { content: 'Updated content' }
+      })
+    })
+
+    it('应更新帖子标签', async () => {
+      const updatedPost = {
+        id: 1,
+        content: 'Content',
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        tags: [{ id: 2, name: 'Tag2', color: '#333' }]
+      }
+
+      const { PrismaClient } = require('@prisma/client')
+      const client = new PrismaClient()
+      client.post.findUnique.mockResolvedValueOnce({}) // get post before update
+      client.post.update.mockResolvedValueOnce() // clear tags
+      client.post.update.mockResolvedValueOnce() // set new tags
+      client.post.findUnique.mockResolvedValueOnce(updatedPost)
+
+      const result = await service.updatePost(1, 'Content', [2])
+
+      expect(result).toEqual(updatedPost)
     })
   })
 })

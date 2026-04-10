@@ -173,15 +173,100 @@ curl -X DELETE https://api.oujun.work/users/1 \
 
 ---
 
+## 🤝 Follows
+
+### POST `/users/:id/follow`
+
+**描述**: Toggle follow/unfollow a user. (Authentication required)
+
+**请求体**: Empty object `{}`
+
+**响应**:
+```json
+{
+  "success": true,
+  "data": {
+    "following": true | false,
+    "followerCount": 10,
+    "followingCount": 5
+  }
+}
+```
+
+**cURL 示例**:
+```bash
+curl -X POST https://api.oujun.work/users/2/follow \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### GET `/users/:id/following`
+
+**描述**: Get the list of users that the specified user is following. (Public)
+
+**响应**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "name": "Jane Doe",
+      "nickname": "Jane",
+      "avatar": "https://...",
+      "role": "user"
+    }
+  ]
+}
+```
+
+**cURL 示例**:
+```bash
+curl https://api.oujun.work/users/1/following
+```
+
+### GET `/users/:id/followers`
+
+**描述**: Get the list of users that follow the specified user. (Public)
+
+**响应**: (same structure as above)
+
+**cURL 示例**:
+```bash
+curl https://api.oujun.work/users/1/followers
+```
+
+### GET `/users/:id/is-following`
+
+**描述**: Check if the current authenticated user is following the specified user. (Authentication required)
+
+**响应**:
+```json
+{
+  "success": true,
+  "data": { "isFollowing": true }
+}
+```
+
+**cURL 示例**:
+```bash
+curl https://api.oujun.work/users/2/is-following \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
 ## 📝 Posts
 
 ### GET `/posts`
 
-**描述**: Get all posts with author information and comment counts (Public)
+**描述**: Get all posts with author information and comment counts. If `followingOnly=true` is passed along with authentication, returns only posts from users that the current user follows. (Public / Auth for followingOnly)
 
 **查询参数** (optional):
 - `page` (number, default: 1)
 - `limit` (number, default: 20)
+- `followingOnly` (boolean) - When true, requires authentication and filters to followed users' posts only.
 
 **响应**:
 ```json
@@ -199,7 +284,12 @@ curl -X DELETE https://api.oujun.work/users/1 \
 
 **cURL 示例**:
 ```bash
+# All posts
 curl "https://api.oujun.work/posts?page=1&limit=20"
+
+# Following only (requires token)
+curl "https://api.oujun.work/posts?page=1&limit=20&followingOnly=true" \
+  -H "Authorization: Bearer <token>"
 ```
 
 ### GET `/posts/:id`

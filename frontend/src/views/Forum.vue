@@ -20,6 +20,15 @@
         <n-button v-if="hasSearched" @click="clearSearch">
           清除
         </n-button>
+        <n-divider vertical />
+        <n-select
+          v-model:value="selectedTagId"
+          :options="tagOptions"
+          placeholder="按标签筛选"
+          clearable
+          style="width: 180px;"
+          @update:value="handleTagFilter"
+        />
       </n-space>
     </n-card>
 
@@ -50,6 +59,17 @@
         </n-form-item>
       </n-form>
     </n-card>
+
+    <!-- 关注过滤控制 -->
+    <div v-if="isLoggedIn" style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+      <n-text depth="3">内容筛选:</n-text>
+      <n-button
+        :type="showFollowingOnly ? 'primary' : 'default'"
+        @click="toggleFollowingOnly"
+      >
+        {{ showFollowingOnly ? '只看关注' : '显示全部' }}
+      </n-button>
+    </div>
 
     <!-- 搜索结果显示 -->
     <div v-if="hasSearched" style="margin-bottom: 24px;">
@@ -185,29 +205,36 @@
 
           <template #footer>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <n-button text type="primary" @click="toggleComments(post.id)">
-                查看回复 ({{ post._count?.comments || 0 }})
-              </n-button>
-
-              <div v-if="canEditPost(post)">
-                <n-button
-                  v-if="editingPostId !== post.id"
-                  text
-                  type="primary"
-                  @click="startEditPost(post.id, post.content)"
-                >
-                  编辑
+              <n-space>
+                <n-button text type="primary" @click="toggleComments(post.id)">
+                  查看回复 ({{ post._count?.comments || 0 }})
                 </n-button>
-              </div>
+                <!-- Like button for post -->
+                <n-button text size="small" @click="handleLikePost(post.id)">
+                  ❤️ {{ post.likeCount || 0 }}
+                </n-button>
+              </n-space>
 
-              <n-button
-                v-if="canDeletePost(post)"
-                type="error"
-                text
-                @click="handleDeletePost(post.id)"
-              >
-                删除
-              </n-button>
+              <n-space>
+                <div v-if="canEditPost(post)">
+                  <n-button
+                    v-if="editingPostId !== post.id"
+                    text
+                    type="primary"
+                    @click="startEditPost(post.id, post.content)"
+                  >
+                    编辑
+                  </n-button>
+                </div>
+                <n-button
+                  v-if="canDeletePost(post)"
+                  type="error"
+                  text
+                  @click="handleDeletePost(post.id)"
+                >
+                  删除
+                </n-button>
+              </n-space>
             </div>
 
             <!-- 回复列表 -->
@@ -248,6 +275,9 @@
 
                   <!-- 底部操作栏 -->
                   <div style="display: flex; gap: 8px; align-items: center;">
+                    <n-button text size="tiny" @click="handleLikeComment(comment.id)">
+                      ❤️ {{ comment.likeCount || 0 }}
+                    </n-button>
                     <n-button
                       text
                       type="primary"
@@ -328,47 +358,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useMessage } from 'naive-ui'
 import { postsApi, commentsApi, searchApi, tagsApi } from '@/api'
 import { marked } from 'marked'
 import { Search as SearchIcon } from '@vicons/ionicons5'
+import { wsClient } from '@/utils/ws'
 import type { FormInst } from 'naive-ui'
 
 const message = useMessage()
-
-interface Post {
-  id: number
-  content: string
-  createdAt: string
-  author: {
-    id: number
-    name: string
-    nickname?: string
-    role: string
-    avatar?: string
-  }
-  _count?: {
-    comments: number
-  }
-  tags?: Tag[]
-}
-
-interface Comment {
-  id: number
-  content: string
-  createdAt: string
-  author: {
-    id: number
-    name: string
-    nickname?: string
-    role: string
-    avatar?: string
-  }
-  postId: number
-  tags?: Tag[]
-}
 
 interface SearchResult {
   type: 'post' | 'comment'
@@ -391,8 +390,50 @@ interface Tag {
   color?: string
 }
 
+interface Post {
+  id: number
+  content: string
+  createdAt: string
+  author: {
+    id: number
+    name: string
+    nickname?: string
+    role: string
+    avatar?: string
+  }
+  _count?: {
+    comments: number
+  }
+  likeCount?: number
+  tags?: Tag[]
+}
+
+interface Comment {
+  id: number
+  content: string
+  createdAt: string
+  author: {
+    id: number
+    name: string
+    nickname?: string
+    role: string
+    avatar?: string
+  }
+  postId: number
+  likeCount?: number
+  tags?: Tag[]
+  replies?: any[]
+}
+
 const userStore = useUserStore()
 const currentUser = computed(() => userStore.user)
+const isLoggedIn = computed(() => !!currentUser.value)
+
+const toggleFollowingOnly = () => {
+  showFollowingOnly.value = !showFollowingOnly.value
+  pagination.value.page = 1
+  loadPosts(1)
+}
 
 const formRef = ref<FormInst>()
 const loading = ref(false)
@@ -430,6 +471,12 @@ const tags = ref<Tag[]>([])
 const selectedTagIds = ref<number[]>([])
 const commentTagIds = ref<Record<number, number[]>>({})
 
+// Tag filter (single)
+const selectedTagId = ref<number | null>(null)
+
+// Following filter
+const showFollowingOnly = ref(false)
+
 const tagOptions = computed(() => tags.value.map(t => ({ label: t.name, value: t.id })))
 
 // Editing states
@@ -440,6 +487,12 @@ const savingPostId = ref<number | null>(null)
 const editingCommentId = ref<number | null>(null)
 const editingCommentContent = ref('')
 const savingCommentId = ref<number | null>(null)
+
+// Like loading states
+const likeLoading = reactive<Record<number, boolean>>({})
+// Local liked state (optimistic)
+const likedPosts = ref<Record<number, boolean>>({})
+const likedComments = ref<Record<number, boolean>>({})
 
 const newPost = reactive({
   content: ''
@@ -481,8 +534,8 @@ function renderMarkdown(text: string) {
 async function loadPosts(page: number = pagination.value.page) {
   try {
     loading.value = true
-    const res = await postsApi.getAll(page, 20)
-    if (res.success) {
+    const res = await postsApi.getAll(page, 20, selectedTagId.value ?? undefined, showFollowingOnly.value)
+    if (res.success && res.data) {
       posts.value = res.data as any[]
       if (res.pagination) {
         pagination.value = {
@@ -505,6 +558,11 @@ async function loadPage(page: number) {
   await loadPosts(page)
   // Scroll to top
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function handleTagFilter() {
+  pagination.value.page = 1
+  loadPosts(1)
 }
 
 async function handlePublish() {
@@ -742,6 +800,110 @@ function goToPost(postId: number | undefined) {
   loadComments(postId)
 }
 
+function handleLikePost(postId: number) {
+  const currentlyLiked = likedPosts.value[postId] || false
+  likeLoading[postId] = true
+  // Optimistic update
+  const post = posts.value.find(p => p.id === postId)
+  if (post) {
+    if (currentlyLiked) {
+      post.likeCount = Math.max(0, (post.likeCount || 0) - 1)
+    } else {
+      post.likeCount = (post.likeCount || 0) + 1
+    }
+    likedPosts.value[postId] = !currentlyLiked
+  }
+  postsApi.like(postId)
+    .then(res => {
+      if (res.success && res.data) {
+        if (post) {
+          post.likeCount = res.data.count ?? 0
+          likedPosts.value[postId] = !!res.data.liked
+        }
+      } else {
+        // Revert
+        if (post) {
+          post.likeCount = currentlyLiked ? (post.likeCount || 0) + 1 : Math.max(0, (post.likeCount || 0) - 1)
+        }
+        likedPosts.value[postId] = currentlyLiked
+      }
+    })
+    .catch(() => {
+      if (post) {
+        post.likeCount = currentlyLiked ? (post.likeCount || 0) + 1 : Math.max(0, (post.likeCount || 0) - 1)
+      }
+      likedPosts.value[postId] = currentlyLiked
+    })
+    .finally(() => {
+      likeLoading[postId] = false
+    })
+}
+
+function handleLikeComment(commentId: number) {
+  const currentlyLiked = likedComments.value[commentId] || false
+  likeLoading[commentId] = true
+  // Find comment in map
+  let targetComment: any = null
+  for (const pid of Object.keys(commentsMap.value)) {
+    const comments = commentsMap.value[Number(pid)]
+    targetComment = comments.find((c: any) => c.id === commentId)
+    if (targetComment) break
+  }
+  if (targetComment) {
+    if (currentlyLiked) {
+      targetComment.likeCount = Math.max(0, (targetComment.likeCount || 0) - 1)
+    } else {
+      targetComment.likeCount = (targetComment.likeCount || 0) + 1
+    }
+    likedComments.value[commentId] = !currentlyLiked
+  }
+  commentsApi.like(commentId)
+    .then(res => {
+      if (res.success && res.data) {
+        if (targetComment) {
+          targetComment.likeCount = res.data.count!
+          likedComments.value[commentId] = res.data.liked!
+        }
+      } else {
+        // Revert
+        if (targetComment) {
+          targetComment.likeCount = currentlyLiked ? (targetComment.likeCount || 0) + 1 : Math.max(0, (targetComment.likeCount || 0) - 1)
+        }
+        likedComments.value[commentId] = currentlyLiked
+      }
+    })
+    .catch(() => {
+      if (targetComment) {
+        targetComment.likeCount = currentlyLiked ? (targetComment.likeCount || 0) + 1 : Math.max(0, (targetComment.likeCount || 0) - 1)
+      }
+      likedComments.value[commentId] = currentlyLiked
+    })
+    .finally(() => {
+      likeLoading[commentId] = false
+    })
+}
+
+function handleRemoteLike(payload: any) {
+  const { targetType, targetId, count } = payload
+  if (targetType === 'post') {
+    const post = posts.value.find(p => p.id === targetId)
+    if (post) {
+      post.likeCount = count
+      // Do not modify likedPosts for remote events
+    }
+  } else if (targetType === 'comment') {
+    for (const pid of Object.keys(commentsMap.value)) {
+      const comments = commentsMap.value[Number(pid)]
+      let target = comments.find((c: any) => c.id === targetId)
+      if (target) {
+        target.likeCount = count
+        // Do not modify likedComments for remote events
+        break
+      }
+    }
+  }
+}
+
 onMounted(async () => {
   try {
     const tagRes = await tagsApi.getAll()
@@ -750,6 +912,14 @@ onMounted(async () => {
     console.error('Failed to load tags:', e)
   }
   await loadPosts()
+  // Setup WebSocket listeners
+  if (userStore.token) {
+    wsClient.on('like', handleRemoteLike)
+  }
+})
+
+onUnmounted(() => {
+  wsClient.off('like', handleRemoteLike)
 })
 </script>
 

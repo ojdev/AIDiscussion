@@ -120,6 +120,72 @@
 **最后更新**: 2026-04-09
 
 ## Phase 8: 标签系统 ✅ 已完成
+- ✅ 后端: TagService 与路由 (GET /tags, POST /tags, DELETE /tags)
+- ✅ 后端: 帖子与评论支持标签关联
+- ✅ 前端: 帖子创建/编辑支持多选标签
+- ✅ 前端: 帖子卡片显示标签
+- ✅ 前端: 搜索栏旁增加标签筛选下拉框
+- ✅ API 文档已更新
+
+## Phase 9: 点赞系统 ✅ 已完成
+- ✅ 后端: ReactionService 完善 (toggleLikePost/Comment)
+- ✅ 后端: PostService 为帖子与评论返回 likeCount
+- ✅ 前端: API 新增 postsApi.like() / commentsApi.like()
+- ✅ 前端: 帖子/评论点赞按钮，包含乐观更新与禁用状态
+- ✅ 前端: 点赞数据与后端同步
+- ✅ 全链路类型安全
+
+## Phase 10: 深色模式 ✅ 已完成
+- ✅ 创建 Pinia store: src/store/theme.ts (isDark, initTheme, toggleTheme)
+- ✅ 监听系统偏好变化
+- ✅ App.vue: 主题切换按钮 (太阳/月亮图标)
+- ✅ App.vue: 绑定 n-config-provider :theme="isDark ? darkTheme : null"
+- ✅ 主题状态持久化到 localStorage
+
+## Phase 11: 关注系统 ✅ 已完成
+- ✅ 后端: 添加 Follow 模型到 Prisma schema，并在 User 模型上建立双向关系
+- ✅ 后端: 创建 FollowService (toggleFollow, getFollowing, getFollowers, checkFollowing)
+- ✅ 后端: 创建 follows router (POST /users/:id/follow, GET /users/:id/following, GET /users/:id/followers, GET /users/:id/is-following)
+- ✅ 后端: PostService.getAll 支持 followingOnly 过滤 (需认证)
+- ✅ 后端: UserService.getMe 和 getProfile 增加 followingCount 和 followerCount 统计
+- ✅ 前端: Forum.vue 增加 "只看关注" 按钮 (基于登录状态)，切换时调用 postsApi.getAll(followingOnly=true)
+- ✅ 前端: Profile.vue 在查看他人资料时显示关注按钮，支持 toggle
+- ✅ 前端: Profile.vue 显示关注/粉丝统计，点击打开 Drawer 列出列表 (使用 followsApi)
+- ✅ API 文档完善: 新增 Follows 章节，更新 GET /posts 说明 followingOnly 参数
+- ✅ 全部类型安全，前端与后端编译通过
+
+**实现细节**: 
+- 关注操作使用 toggle 语义，返回目标用户的 followerCount/followingCount
+- 关注/粉丝列表使用 Drawer 展示，支持滚动查看
+- 关注过滤只在认证用户下可用，未登录不显示按钮
+- 数据库层面使用复合唯一索引防止重复关注
+
+---
+
+## Phase 13: WebSocket 实时推送 ✅ 已完成
+- ✅ 前端: 创建 src/utils/ws.ts (connect, reconnect backoff, event emitter)
+- ✅ 前端: App.vue 根据登录状态初始化连接，自动重连
+- ✅ 前端: 通知事件增加未读计数徽章，弹窗/通知页数据刷新
+- ✅ 前端: Like 事件实时更新 Forum 页面 DOM (乐观更新与服务器同步)
+- ✅ 前端: Follow 事件广播 (控制台或 UI)
+- ✅ 后端: wsService 已实现，路由 /ws 注册，带 JWT 认证
+- ✅ 后端: ReactionService 与 FollowService 发送 WS 广播
+- ✅ 容错: WS 失败仍依赖轮询降级
+- ✅ 用户登出时断开连接
+
+## 文档 ✅ 已更新
+- ✅ API.md 新增: Tags, Reactions, Follows, WebSocket, Posts 扩展
+- ✅ README.md 特性列表更新
+- ✅ Task.md 本文件更新
+
+## 构建验证 ✅
+- ✅ 后端: `npx tsc` 无错误 (忽略测试文件)
+- ✅ 前端: `npm run build` 成功 (vue-tsc + vite)
+- ✅ 向后兼容: 新增字段可选，不影响旧客户端
+
+**最后更新**: 2026-04-10
+
+## Phase 8: 标签系统 ✅ 已完成
 - ✅ 后端: 更新 Prisma schema 添加 Tag 模型 (与 Post、Comment 隐式多对多)
 - ✅ 后端: 创建 TagService (getAll, create, delete)
 - ✅ 后端: 新增 GET /tags 端点 (公开列表), POST/DELETE 仅管理员

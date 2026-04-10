@@ -1,10 +1,13 @@
 import { PrismaClient } from '@prisma/client'
+import { NotificationService } from './notificationService.js'
+import { wsService } from './wsService.js'
 
 const prisma = new PrismaClient()
+const notificationService = new NotificationService()
 
 export class CommentService {
   async getCommentsByPostId(postId: number) {
-    return await prisma.comment.findMany({
+    const comments = await prisma.comment.findMany({
       where: { postId, parentId: null },
       include: {
         author: {
@@ -16,7 +19,6 @@ export class CommentService {
             role: true,
           },
         },
-        tags: true,
         replies: {
           include: {
             author: {
@@ -28,19 +30,36 @@ export class CommentService {
                 role: true,
               },
             },
-            tags: true,
           },
           orderBy: { createdAt: 'asc' },
         },
       },
       orderBy: { createdAt: 'asc' },
     })
+    // Append like counts for each comment and their replies
+    await Promise.all(
+      comments.map(async (comment) => {
+        // @ts-ignore - dynamically add likeCount
+        comment.likeCount = await prisma.reaction.count({
+          where: { targetType: 'comment', targetId: comment.id, type: 'like' }
+        })
+        if (comment.replies) {
+          await Promise.all(
+            comment.replies.map(async (reply) => {
+              // @ts-ignore
+              reply.likeCount = await prisma.reaction.count({
+                where: { targetType: 'comment', targetId: reply.id, type: 'like' }
+              })
+            })
+          )
+        }
+      })
+    )
+    return comments
   }
 
   async createComment(data: { content: string; postId: number; authorId: number; parentId?: number; tagIds?: number[] }) {
-    // 分离 tagIds
     const { tagIds, ...commentData } = data
-
     const comment = await prisma.comment.create({
       data: commentData,
       include: {
@@ -93,7 +112,7 @@ export class CommentService {
   }
 
   async getCommentById(id: number) {
-    return await prisma.comment.findUnique({
+    const comment = await prisma.comment.findUnique({
       where: { id },
       include: {
         author: {
@@ -106,9 +125,15 @@ export class CommentService {
           },
         },
         post: true,
-        tags: true,
       },
     })
+    if (comment) {
+      // @ts-ignore
+      comment.likeCount = await prisma.reaction.count({
+        where: { targetType: 'comment', targetId: id, type: 'like' }
+      })
+    }
+    return comment
   }
 
   async updateComment(id: number, content: string) {
@@ -125,7 +150,6 @@ export class CommentService {
             role: true,
           },
         },
-        tags: true,
       },
     })
   }
