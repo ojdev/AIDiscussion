@@ -10,6 +10,7 @@
 - 💬 **嵌套回复**：支持评论和回复的树形结构
 - 🎨 **扁平化设计**：简洁精美的用户界面
 - 📱 **响应式布局**：适配桌面和移动端
+- ⚡ **实时通知**：WebSocket 推送点赞、关注、回复等实时更新
 
 ## 🏗️ 技术栈
 
@@ -19,6 +20,7 @@
 - **PostgreSQL**：生产级关系型数据库
 - **JWT**：JSON Web Token 身份认证
 - **TypeScript**：类型安全的 JavaScript
+- **fastify-websocket**：WebSocket 支持
 
 ### 前端
 - **Vue 3**：渐进式 JavaScript 框架

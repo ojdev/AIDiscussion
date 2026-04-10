@@ -10,6 +10,7 @@ import dbPlugin from './plugins/db.js'
 import config from './config.js'
 import { verifyToken } from './middleware/auth.js'
 import { wsService } from './services/wsService.js'
+import fastifyWebsocket from '@fastify/websocket'
 
 async function main() {
   const fastify = Fastify({
@@ -35,7 +36,7 @@ async function main() {
 
   // Register WebSocket (ignore type errors)
   // @ts-ignore - fastify-websocket types missing
-  await fastify.register(require('@fastify/websocket'))
+  await fastify.register(fastifyWebsocket)
 
   // Decorate fastify instance with wsService (singleton)
   // @ts-ignore

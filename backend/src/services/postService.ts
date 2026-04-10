@@ -77,6 +77,7 @@ export class PostService {
   }
 
   async getPostById(id: number) {
+    // Fetch post with author, tags, and top-level comments (with nested replies)
     const post = await prisma.post.findUnique({
       where: { id },
       select: {
@@ -100,16 +101,66 @@ export class PostService {
             comments: true,
           },
         },
+        comments: {
+          where: { parentId: null },
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                nickname: true,
+                avatar: true,
+                role: true,
+              },
+            },
+            tags: true,
+            replies: {
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    nickname: true,
+                    avatar: true,
+                    role: true,
+                  },
+                },
+                tags: true,
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     })
 
     if (!post) return null
 
+    // Compute likeCount for the post
     const likeCount = await prisma.reaction.count({
       where: { targetType: 'post', targetId: id, type: 'like' }
     })
 
-    return { ...post, likeCount }
+    // Compute likeCount for each comment and reply
+    const commentsWithLikes = await Promise.all(
+      (post.comments || []).map(async (comment: any) => {
+        const commentLikeCount = await prisma.reaction.count({
+          where: { targetType: 'comment', targetId: comment.id, type: 'like' }
+        })
+        const repliesWithLikes = await Promise.all(
+          (comment.replies || []).map(async (reply: any) => {
+            const replyLikeCount = await prisma.reaction.count({
+              where: { targetType: 'comment', targetId: reply.id, type: 'like' }
+            })
+            return { ...reply, likeCount: replyLikeCount }
+          })
+        )
+        return { ...comment, likeCount: commentLikeCount, replies: repliesWithLikes }
+      })
+    )
+
+    return { ...post, likeCount, comments: commentsWithLikes }
   }
 
   async createPost(data: { content: string; authorId: number; tagIds?: number[] }) {
@@ -171,26 +222,19 @@ export class PostService {
   }
 
   async updatePost(id: number, content: string, tagIds?: number[]) {
-    // If tagIds provided, update tags relation
+    const updateData: any = { content }
     if (tagIds !== undefined) {
       if (tagIds.length === 0) {
-        // Clear all tags
-        await prisma.post.update({
-          where: { id },
-          data: { tags: { set: [] } }
-        })
+        updateData.tags = { set: [] }
       } else {
-        // Set tags to the provided list
-        await prisma.post.update({
-          where: { id },
-          data: {
-            tags: {
-              set: tagIds.map(id => ({ id })),
-            },
-          },
-        })
+        updateData.tags = { set: tagIds.map(tagId => ({ id: tagId })) }
       }
     }
+
+    await prisma.post.update({
+      where: { id },
+      data: updateData
+    })
 
     return await prisma.post.findUnique({
       where: { id },

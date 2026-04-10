@@ -11,8 +11,11 @@ class WSClient {
   private shouldReconnect = true
 
   constructor() {
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    this.url = `${protocol}://${window.location.host}`
+    // Determine WebSocket server URL from API_BASE_URL (backend host)
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://api.oujun.work'
+    const url = new URL(apiBase)
+    const protocol = url.protocol === 'https:' ? 'wss' : 'ws'
+    this.url = `${protocol}://${url.host}`
   }
 
   connect(userToken: string) {

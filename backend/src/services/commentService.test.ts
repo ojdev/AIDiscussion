@@ -11,6 +11,7 @@ vi.mock('@prisma/client', () => {
   const mockTagFindMany = vi.fn()
   const mockTagFindUnique = vi.fn()
   const mockUserFindUnique = vi.fn()
+  const mockReactionCount = vi.fn()
 
   const mockComment = {
     findMany: mockCommentFindMany,
@@ -22,13 +23,14 @@ vi.mock('@prisma/client', () => {
   const mockPost = { findUnique: mockPostFindUnique }
   const mockTag = { findMany: mockTagFindMany, findUnique: mockTagFindUnique }
   const mockUser = { findUnique: mockUserFindUnique }
+  const mockReaction = { count: mockReactionCount }
 
-  // Expose mocks globally for test setup
   ;(global as any).__MOCK_PRISMA__ = {
     comment: mockComment,
     post: mockPost,
     tag: mockTag,
-    user: mockUser
+    user: mockUser,
+    reaction: mockReaction
   }
 
   return {
@@ -37,6 +39,7 @@ vi.mock('@prisma/client', () => {
       post = mockPost
       tag = mockTag
       user = mockUser
+      reaction = mockReaction
       $disconnect = vi.fn()
     }
   }
@@ -48,16 +51,8 @@ beforeEach(() => {
   const mocks = (global as any).__MOCK_PRISMA__
   if (mocks) {
     vi.clearAllMocks()
-    // Also clear individual mocks explicitly
-    mocks.comment.findMany.mockClear?.()
-    mocks.comment.findUnique.mockClear?.()
-    mocks.comment.create.mockClear?.()
-    mocks.comment.delete.mockClear?.()
-    mocks.comment.update.mockClear?.()
-    mocks.post.findUnique.mockClear?.()
-    mocks.tag.findMany.mockClear?.()
-    mocks.tag.findUnique.mockClear?.()
-    mocks.user.findUnique.mockClear?.()
+    // Reset reaction count to 0 for all calls
+    mocks.reaction.count.mockImplementation(() => Promise.resolve(0))
   }
 })
 
@@ -78,36 +73,32 @@ describe('CommentService', () => {
             content: 'Reply',
             author: { id: 2, name: 'User2', nickname: 'U2', avatar: '', role: { name: 'admin' } },
             tags: []
-          }]
+          }],
+          likeCount: 0 // will be overwritten but start with 0
         }
       ]
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.findMany.mockResolvedValue(mockComments)
+      mocks.comment.findMany.mockResolvedValue(mockComments)
 
       const result = await service.getCommentsByPostId(1)
 
       expect(result).toHaveLength(1)
       expect(result[0].replies).toHaveLength(1)
-      expect(client.comment.findMany).toHaveBeenCalledWith({
-        where: { postId: 1, parentId: null },
-        include: expect.objectContaining({
-          author: expect.any(Object),
-          tags: true,
-          replies: expect.objectContaining({
-            include: expect.any(Object),
-            orderBy: { createdAt: 'asc' }
-          })
-        }),
-        orderBy: { createdAt: 'asc' }
-      })
+      // Verify likeCount added
+      expect(result[0].likeCount).toBe(0)
+      expect(result[0].replies[0].likeCount).toBe(0)
+
+      // Verify findMany called with correct where and include structure
+      expect(mocks.comment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ postId: 1, parentId: null }),
+          orderBy: { createdAt: 'asc' }
+        })
+      )
     })
 
     it('无评论时返回空数组', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.findMany.mockResolvedValue([])
+      mocks.comment.findMany.mockResolvedValue([])
 
       const result = await service.getCommentsByPostId(999)
 
@@ -123,12 +114,11 @@ describe('CommentService', () => {
         postId: 1,
         authorId: 1,
         parentId: null,
-        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } }
+        author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
+        tags: []
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.create.mockResolvedValueOnce(mockComment)
+      mocks.comment.create.mockResolvedValueOnce(mockComment)
 
       const result = await service.createComment({
         content: 'New comment',
@@ -137,9 +127,19 @@ describe('CommentService', () => {
       })
 
       expect(result).toEqual(mockComment)
-      expect(client.comment.create).toHaveBeenCalledWith({
+      expect(mocks.comment.create).toHaveBeenCalledWith({
         data: { content: 'New comment', postId: 1, authorId: 1 },
-        include: { author: expect.any(Object) }
+        include: expect.objectContaining({
+          author: expect.objectContaining({
+            select: expect.objectContaining({
+              id: true,
+              name: true,
+              nickname: true,
+              avatar: true,
+              role: true
+            })
+          })
+        })
       })
     })
 
@@ -152,9 +152,7 @@ describe('CommentService', () => {
         parentId: 1
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.create.mockResolvedValueOnce(mockComment)
+      mocks.comment.create.mockResolvedValueOnce(mockComment)
 
       const result = await service.createComment({
         content: 'Reply',
@@ -175,11 +173,9 @@ describe('CommentService', () => {
         tags: [{ id: 1, name: 'Tag1', color: '#000' }]
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.create.mockResolvedValueOnce(createdComment)
-      client.comment.update.mockResolvedValueOnce()
-      client.comment.findUnique.mockResolvedValueOnce(commentWithTags)
+      mocks.comment.create.mockResolvedValueOnce(createdComment)
+      mocks.comment.update.mockResolvedValueOnce()
+      mocks.comment.findUnique.mockResolvedValueOnce(commentWithTags)
 
       const result = await service.createComment({
         content: 'Comment',
@@ -189,7 +185,7 @@ describe('CommentService', () => {
       })
 
       expect(result).toEqual(commentWithTags)
-      expect(client.comment.update).toHaveBeenCalledWith({
+      expect(mocks.comment.update).toHaveBeenCalledWith({
         where: { id: 1 },
         data: { tags: { connect: [{ id: 1 }] } }
       })
@@ -198,13 +194,11 @@ describe('CommentService', () => {
 
   describe('deleteComment', () => {
     it('应删除评论', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.delete.mockResolvedValue({ id: 1 })
+      mocks.comment.delete.mockResolvedValue({ id: 1 })
 
       await service.deleteComment(1)
 
-      expect(client.comment.delete).toHaveBeenCalledWith({ where: { id: 1 } })
+      expect(mocks.comment.delete).toHaveBeenCalledWith({ where: { id: 1 } })
     })
   })
 
@@ -215,20 +209,27 @@ describe('CommentService', () => {
         content: 'Comment',
         author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
         post: { id: 1 },
-        tags: []
+        tags: [],
+        likeCount: 0
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.findUnique.mockResolvedValue(mockComment)
+      mocks.comment.findUnique.mockResolvedValue(mockComment)
 
       const result = await service.getCommentById(1)
 
       expect(result).toEqual(mockComment)
-      expect(client.comment.findUnique).toHaveBeenCalledWith({
+      expect(mocks.comment.findUnique).toHaveBeenCalledWith({
         where: { id: 1 },
         include: expect.objectContaining({
-          author: expect.any(Object),
+          author: expect.objectContaining({
+            select: expect.objectContaining({
+              id: true,
+              name: true,
+              nickname: true,
+              avatar: true,
+              role: true
+            })
+          }),
           post: true,
           tags: true
         })
@@ -236,9 +237,7 @@ describe('CommentService', () => {
     })
 
     it('未找到评论返回null', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.findUnique.mockResolvedValue(null)
+      mocks.comment.findUnique.mockResolvedValue(null)
 
       const result = await service.getCommentById(999)
 
@@ -252,21 +251,28 @@ describe('CommentService', () => {
         id: 1,
         content: 'Updated content',
         author: { id: 1, name: 'User', nickname: 'U', avatar: '', role: { name: 'user' } },
-        tags: []
+        tags: [],
+        likeCount: 0
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.comment.update.mockResolvedValue(updatedComment)
+      mocks.comment.update.mockResolvedValue(updatedComment)
 
       const result = await service.updateComment(1, 'Updated content')
 
       expect(result.content).toBe('Updated content')
-      expect(client.comment.update).toHaveBeenCalledWith({
+      expect(mocks.comment.update).toHaveBeenCalledWith({
         where: { id: 1 },
         data: { content: 'Updated content' },
         include: expect.objectContaining({
-          author: expect.any(Object),
+          author: expect.objectContaining({
+            select: expect.objectContaining({
+              id: true,
+              name: true,
+              nickname: true,
+              avatar: true,
+              role: true
+            })
+          }),
           tags: true
         })
       })

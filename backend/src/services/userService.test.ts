@@ -9,22 +9,39 @@ vi.mock('@prisma/client', () => {
   const mockUserUpdate = vi.fn()
   const mockUserDelete = vi.fn()
   const mockUserCount = vi.fn()
-  const mockRole = {
-    findUnique: vi.fn(),
-    findMany: vi.fn()
+  const mockRoleFindUnique = vi.fn()
+  const mockRoleFindMany = vi.fn()
+  const mockPostCount = vi.fn()
+  const mockCommentCount = vi.fn()
+  const mockFollowCount = vi.fn()
+
+  const mocks = {
+    user: {
+      findUnique: mockUserFindUnique,
+      findMany: mockUserFindMany,
+      create: mockUserCreate,
+      update: mockUserUpdate,
+      delete: mockUserDelete,
+      count: mockUserCount
+    },
+    role: {
+      findUnique: mockRoleFindUnique,
+      findMany: mockRoleFindMany
+    },
+    post: { count: mockPostCount },
+    comment: { count: mockCommentCount },
+    follow: { count: mockFollowCount }
   }
+
+  ;(global as any).__MOCK_PRISMA__ = mocks
 
   return {
     PrismaClient: class {
-      user = {
-        findUnique: mockUserFindUnique,
-        findMany: mockUserFindMany,
-        create: mockUserCreate,
-        update: mockUserUpdate,
-        delete: mockUserDelete,
-        count: mockUserCount
-      }
-      role = mockRole
+      user = mocks.user
+      role = mocks.role
+      post = mocks.post
+      comment = mocks.comment
+      follow = mocks.follow
       $disconnect = vi.fn()
     }
   }
@@ -39,17 +56,32 @@ vi.mock('../config.js', () => ({
 
 // Mock jwt
 vi.mock('jsonwebtoken', () => ({
-  sign: vi.fn(() => 'mock-token')
+  default: { sign: vi.fn(() => 'mock-token') }
 }))
 
 import { UserService } from '../services/userService.js'
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  const mocks = (global as any).__MOCK_PRISMA__
+  if (mocks) {
+    vi.clearAllMocks()
+    mocks.user.findUnique.mockClear?.()
+    mocks.user.findMany.mockClear?.()
+    mocks.user.create.mockClear?.()
+    mocks.user.update.mockClear?.()
+    mocks.user.delete.mockClear?.()
+    mocks.user.count.mockClear?.()
+    mocks.role.findUnique.mockClear?.()
+    mocks.role.findMany.mockClear?.()
+    mocks.post.count.mockResolvedValue(0)
+    mocks.comment.count.mockResolvedValue(0)
+    mocks.follow.count.mockResolvedValue(0)
+  }
 })
 
 describe('UserService', () => {
   const service = new UserService()
+  const mocks = (global as any).__MOCK_PRISMA__
 
   describe('createUser', () => {
     it('应创建用户', async () => {
@@ -62,9 +94,7 @@ describe('UserService', () => {
         avatar: ''
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.create.mockResolvedValue(mockUser)
+      mocks.user.create.mockResolvedValue(mockUser)
 
       const result = await service.createUser({
         apiKey: 'key123',
@@ -74,7 +104,7 @@ describe('UserService', () => {
       })
 
       expect(result).toEqual(mockUser)
-      expect(client.user.create).toHaveBeenCalledWith({
+      expect(mocks.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           apiKey: 'key123',
           name: 'Test User',
@@ -94,23 +124,19 @@ describe('UserService', () => {
         role: { name: 'admin' }
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(mockUser)
+      mocks.user.findUnique.mockResolvedValue(mockUser)
 
       const result = await service.getUserByApiKey('key123')
 
       expect(result).toEqual(mockUser)
-      expect(client.user.findUnique).toHaveBeenCalledWith({
+      expect(mocks.user.findUnique).toHaveBeenCalledWith({
         where: { apiKey: 'key123' },
         include: { role: true }
       })
     })
 
     it('无效API key返回null', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(null)
+      mocks.user.findUnique.mockResolvedValue(null)
 
       const result = await service.getUserByApiKey('invalid')
 
@@ -125,10 +151,8 @@ describe('UserService', () => {
         { id: 2, name: 'User2', nickname: 'U2', avatar: '', createdAt: new Date(), role: { name: 'admin' } }
       ]
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.count.mockResolvedValue(50)
-      client.user.findMany.mockResolvedValue(mockUsers)
+      mocks.user.count.mockResolvedValue(50)
+      mocks.user.findMany.mockResolvedValue(mockUsers)
 
       const result = await service.getAllUsers(1, 10)
 
@@ -139,8 +163,15 @@ describe('UserService', () => {
         total: 50,
         totalPages: 5
       })
-      expect(client.user.findMany).toHaveBeenCalledWith({
-        select: expect.arrayContaining([expect.objectContaining({ id: true, name: true })]),
+      expect(mocks.user.findMany).toHaveBeenCalledWith({
+        select: expect.objectContaining({
+          id: true,
+          name: true,
+          nickname: true,
+          avatar: true,
+          createdAt: true,
+          role: true
+        }),
         orderBy: { createdAt: 'desc' },
         skip: 0,
         take: 10
@@ -159,28 +190,26 @@ describe('UserService', () => {
         role: { name: 'user' }
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(mockUser)
+      mocks.user.findUnique.mockResolvedValue(mockUser)
 
       const result = await service.getUserById(1)
 
       expect(result).toEqual(mockUser)
-      expect(client.user.findUnique).toHaveBeenCalledWith({
+      expect(mocks.user.findUnique).toHaveBeenCalledWith({
         where: { id: 1 },
         select: expect.objectContaining({
           id: true,
           name: true,
           nickname: true,
-          role: expect.any(Object)
+          avatar: true,
+          createdAt: true,
+          role: true
         })
       })
     })
 
     it('未找到用户返回null', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(null)
+      mocks.user.findUnique.mockResolvedValue(null)
 
       const result = await service.getUserById(999)
 
@@ -190,30 +219,27 @@ describe('UserService', () => {
 
   describe('updateUser', () => {
     it('应更新用户', async () => {
-      const updatedUser = { id: 1, name: 'Updated Name', nickname: 'Updated' }
+      const updatedUser = { id: 1, name: 'Updated Name' }
+      mocks.user.update.mockResolvedValue(updatedUser)
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.update.mockResolvedValue(updatedUser)
+      const result = await service.updateUser(1, { name: 'Updated Name' })
 
-      const result = await service.updateUser(1, { name: 'Updated Name', nickname: 'Updated' })
-
-      expect(client.user.update).toHaveBeenCalledWith({
+      expect(result).toEqual(updatedUser)
+      expect(mocks.user.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { name: 'Updated Name', nickname: 'Updated' }
+        data: { name: 'Updated Name' }
       })
     })
   })
 
   describe('deleteUser', () => {
     it('应删除用户', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.delete.mockResolvedValue({ id: 1 })
+      const deletedUser = { id: 1 }
+      mocks.user.delete.mockResolvedValue(deletedUser)
 
       await service.deleteUser(1)
 
-      expect(client.user.delete).toHaveBeenCalledWith({ where: { id: 1 } })
+      expect(mocks.user.delete).toHaveBeenCalledWith({ where: { id: 1 } })
     })
   })
 
@@ -226,9 +252,7 @@ describe('UserService', () => {
         role: { name: 'user' }
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(mockUser)
+      mocks.user.findUnique.mockResolvedValue(mockUser)
 
       const result = await service.authenticate('key123')
 
@@ -242,9 +266,7 @@ describe('UserService', () => {
     })
 
     it('无效API key抛出错误', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(null)
+      mocks.user.findUnique.mockResolvedValue(null)
 
       await expect(service.authenticate('invalid')).rejects.toThrow('Invalid API key')
     })
@@ -262,11 +284,12 @@ describe('UserService', () => {
         createdAt: new Date()
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(mockUser)
-      client.post.count.mockResolvedValue(5)
-      client.comment.count.mockResolvedValue(10)
+      mocks.user.findUnique.mockResolvedValue(mockUser)
+      mocks.post.count.mockResolvedValue(5)
+      mocks.comment.count.mockResolvedValue(10)
+      // Two follow count queries: followingCount (followerId) then followerCount (followingId)
+      mocks.follow.count.mockResolvedValueOnce(3)
+      mocks.follow.count.mockResolvedValueOnce(7)
 
       const result = await service.getMe(1)
 
@@ -278,14 +301,17 @@ describe('UserService', () => {
         role: 'user',
         avatar: '',
         joinedAt: mockUser.createdAt,
-        stats: { postCount: 5, commentCount: 10 }
+        stats: {
+          postCount: 5,
+          commentCount: 10,
+          followingCount: 3,
+          followerCount: 7
+        }
       })
     })
 
     it('用户不存在抛出错误', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(null)
+      mocks.user.findUnique.mockResolvedValue(null)
 
       await expect(service.getMe(999)).rejects.toThrow('User not found')
     })
@@ -293,29 +319,40 @@ describe('UserService', () => {
 
   describe('updateMe', () => {
     it('应更新用户信息并返回更新后的数据', async () => {
-      const mockUser = {
+      const updatedUser = {
         id: 1,
         apiKey: 'key123',
         name: 'User',
-        nickname: 'Updated',
-        avatar: 'new.jpg',
+        nickname: 'New Nick',
+        avatar: '',
         role: { name: 'user' },
         createdAt: new Date()
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(mockUser)
-      client.post.count.mockResolvedValue(3)
-      client.comment.count.mockResolvedValue(7)
+      mocks.user.findUnique.mockResolvedValue(updatedUser)
+      mocks.post.count.mockResolvedValue(3)
+      mocks.comment.count.mockResolvedValue(7)
 
-      const result = await service.updateMe(1, { nickname: 'Updated', avatar: 'new.jpg' })
+      const result = await service.updateMe(1, { nickname: 'New Nick' })
 
-      expect(result.nickname).toBe('Updated')
-      expect(result.avatar).toBe('new.jpg')
-      expect(client.user.update).toHaveBeenCalledWith({
+      expect(result).toEqual({
+        id: 1,
+        apiKey: 'key123',
+        name: 'User',
+        nickname: 'New Nick',
+        role: 'user',
+        avatar: '',
+        joinedAt: updatedUser.createdAt,
+        stats: {
+          postCount: 3,
+          commentCount: 7,
+          followingCount: 0,
+          followerCount: 0
+        }
+      })
+      expect(mocks.user.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { nickname: 'Updated', avatar: 'new.jpg' }
+        data: { nickname: 'New Nick' }
       })
     })
   })
@@ -331,11 +368,11 @@ describe('UserService', () => {
         role: { name: 'user' }
       }
 
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue(mockUser)
-      client.post.count.mockResolvedValue(2)
-      client.comment.count.mockResolvedValue(4)
+      mocks.user.findUnique.mockResolvedValue(mockUser)
+      mocks.post.count.mockResolvedValue(2)
+      mocks.comment.count.mockResolvedValue(4)
+      mocks.follow.count.mockResolvedValue(5) // following
+      mocks.follow.count.mockResolvedValue(10) // followers
 
       const result = await service.getProfile(1)
 
@@ -343,26 +380,34 @@ describe('UserService', () => {
         id: 1,
         name: 'User',
         nickname: 'U',
-        role: 'user',
         avatar: '',
         joinedAt: mockUser.createdAt,
-        stats: { postCount: 2, commentCount: 4 }
+        role: 'user',
+        stats: {
+          postCount: 2,
+          commentCount: 4,
+          followingCount: 5,
+          followerCount: 10
+        }
       })
+      // Ensure apiKey not included
+      expect(result).not.toHaveProperty('apiKey')
     })
 
     it('不返回敏感字段（如apiKey）', async () => {
-      const { PrismaClient } = require('@prisma/client')
-      const client = new PrismaClient()
-      client.user.findUnique.mockResolvedValue({
+      const mockUser = {
         id: 1,
+        apiKey: 'secret-key',
         name: 'User',
-        nickname: 'U',
-        apiKey: 'should-not-appear',
         role: { name: 'user' },
         createdAt: new Date()
-      })
-      client.post.count.mockResolvedValue(0)
-      client.comment.count.mockResolvedValue(0)
+      }
+
+      mocks.user.findUnique.mockResolvedValue(mockUser)
+      mocks.post.count.mockResolvedValue(0)
+      mocks.comment.count.mockResolvedValue(0)
+      mocks.follow.count.mockResolvedValue(0)
+      mocks.follow.count.mockResolvedValue(0)
 
       const result = await service.getProfile(1)
 
