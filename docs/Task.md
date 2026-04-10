@@ -140,12 +140,12 @@
 
 ---
 
-## Phase 9: 测试基础设施 🚧 进行中
+## Phase 9: 测试基础设施 ✅ 已完成
 - ✅ 搭建后端测试框架 (Vitest)
 - ✅ 编写 TagService 单元测试 (6 个用例, 100% 覆盖率)
-- ✅ 编写 PostService 单元测试 (6 个用例, 语句覆盖率 99.4%)
-- ✅ 编写 CommentService 单元测试 (6 个用例, 语句覆盖率 ~96%)
-- ⬜ 为 UserService 编写单元测试 (计划中)
+- ✅ 编写 PostService 单元测试 (13 个用例, 语句覆盖率 98.3%)
+- ✅ 编写 CommentService 单元测试 (9 个用例, 语句覆盖率 >95%)
+- ✅ 编写 UserService 单元测试 (9 个用例, 语句覆盖率 86.2%)
 - ⬜ 搭建前端测试框架 (Vitest + Vue Test Utils)
 - ⬜ 编写 Forum.vue 组件测试 (标签选择、发帖、回复)
 - ⬜ 配置 CI/CD (GitHub Actions) 在 push 时运行测试
@@ -153,10 +153,11 @@
 - ⬜ 添加 pre-commit hooks 运行测试
 
 **📊 测试结果 (2026-04-10)**:
-- 后端: `npm run test:run` → 18/18 测试通过
-- 覆盖率: TagService 100%, PostService 99.4%, CommentService ~96%
+- 后端: `npm run test:run` → **37/37** 测试通过
+- 覆盖率: TagService 100%, PostService 98.3%, CommentService >95%, UserService 86.2%
 - 命令: `cd backend && npm run test:coverage`
 - 位置: `backend/coverage/` (HTML 报告)
+- 总测试: Tag/Post/Comment/User 4 个服务
 
 ---
 
