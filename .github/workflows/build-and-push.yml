@@ -75,3 +75,41 @@ jobs:
           tags: |
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:latest
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:${{ steps.version.outputs.VERSION }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    permissions:
+      contents: read
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
+
+      - name: 远程部署后端
+        run: |
+          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "\
+            cd /root/work/AIDiscussion/deploy && \
+            podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-backend:latest && \
+            podman kube play -f backend-pod.yaml && \
+            podman system prune -af --force \
+          "
+
+      - name: 远程部署前端
+        run: |
+          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "\
+            cd /root/work/AIDiscussion/deploy && \
+            podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:latest && \
+            podman kube play -f frontend-pod.yaml && \
+            podman system prune -af --force \
+          "
+
+      - name: 清理本地 SSH 密钥
+        if: always()
+        run: rm -rf ~/.ssh/id_rsa ~/.ssh/config
