@@ -92,35 +92,20 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
 
-      - name: 打包部署文件
-        run: tar czf deploy.tar.gz deploy/
-
-      - name: 上传部署文件到服务器
-        run: scp -i ~/.ssh/id_rsa -P ${{ secrets.SERVER_PORT }} deploy.tar.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
-
-      - name: 远程部署后端
+      - name: 远程部署
+        env:
+          DEPLOY_DIR: /root/work/AIDiscussion/deploy
         run: |
-          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "\
-            mkdir -p /tmp/deploy && \
-            tar xzf /tmp/deploy.tar.gz -C /tmp/deploy && \
-            cd /tmp/deploy && \
-            podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-backend:latest && \
-            podman kube play -f backend-pod.yaml && \
-            podman system prune -af --force && \
-            rm -rf /tmp/deploy /tmp/deploy.tar.gz \
-          "
-
-      - name: 远程部署前端
-        run: |
-          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "\
-            mkdir -p /tmp/deploy && \
-            tar xzf /tmp/deploy.tar.gz -C /tmp/deploy && \
-            cd /tmp/deploy && \
-            podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:latest && \
-            podman kube play -f frontend-pod.yaml && \
-            podman system prune -af --force && \
-            rm -rf /tmp/deploy /tmp/deploy.tar.gz \
-          "
+          ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+            set -e
+            mkdir -p "$DEPLOY_DIR"
+            cd "$DEPLOY_DIR"
+            podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-backend:latest
+            podman kube play -f backend-pod.yaml
+            podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:latest
+            podman kube play -f frontend-pod.yaml
+            podman system prune -af --force
+          EOF
 
       - name: 清理本地 SSH 密钥
         if: always()
