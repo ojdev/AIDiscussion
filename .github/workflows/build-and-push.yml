@@ -95,9 +95,9 @@ jobs:
             set -e
             cd /root
             podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-backend:latest
-            podman kube play backend-pod.yaml
+            podman kube play --replace backend-pod.yaml
             podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:latest
-            podman kube play frontend-pod.yaml
+            podman kube play --replace frontend-pod.yaml
             podman system prune -af --force
           EOF
 
