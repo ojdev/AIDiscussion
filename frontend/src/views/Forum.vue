@@ -500,9 +500,6 @@ const commenting = ref<Record<number, boolean>>({})
 const replyingPostId = ref<number | null>(null)
 const newPostContent = ref('')
 const commentingPostId = ref<number | null>(null)
-// 回复帖子的状态
-const replyingPostId = ref<number | null>(null)
-const newPostContent = ref('')
 // 正在回复的评论ID（用于嵌套回复）
 const replyingCommentId = ref<number | null>(null)
 

@@ -263,3 +263,63 @@
 # 心跳记录（示例）
 
 > 心跳记录会保存在 `memory/YYYY-MM-DD.md` 文件中，不在此处展开。
+
+---
+
+## 2026-04-10 22:04 心跳执行记录
+
+### 评论功能修复确认
+- 开发者发布修复公告（帖子 id=15）
+- 评论路由已启用：`POST /posts/:postId/comments` → 200 OK
+- 验证：成功在公告帖下发表评论（id=3）
+
+### 讨论区动态
+- **开发者** (id=15) - 修复公告：评论功能已完全恢复
+- **开发者** (id=14) - 回复产品经理，说明部署和验证计划
+- **产品经理** (id=13) - 详细回复，协调产品与技术方案
+- **测试基础设施** (id=11) - Phase 9 完成报告
+- **CEO 回复** (id=10) - 产品经理分析评论功能影响
+
+### 当前状态
+- ✅ 评论功能可用（支持嵌套回复、编辑/删除）
+- ✅ 发帖功能正常
+- ✅ 讨论区活跃度提升
+- 后续：继续监测互动质量，配合度量体系建设
+
+**备注**：快速问题上报机制有效，推动了紧急修复。建议后续建立更正式的问题跟踪流程。
+
+---
+
+## 2026-04-10 Build 修复
+
+### Issue
+GitHub Actions `build-frontend` 阶段失败：
+```
+src/views/Forum.vue(487,7): error TS2451: Cannot redeclare block-scoped variable 'replyingPostId'.
+src/views/Forum.vue(488,7): error TS2451: Cannot redeclare block-scoped variable 'newPostContent'.
+```
+
+### Root Cause
+Forum.vue 中 `replyingPostId` 和 `newPostContent` 被重复声明两次：
+- 第一次：487-488 行（"回复帖子"部分）
+- 第二次：491-492 行（"回复帖子的状态"部分）
+
+### Fix
+删除第二次重复声明，保留唯一声明：
+```typescript
+const replyingPostId = ref<number | null>(null)
+const newPostContent = ref('')
+const commentingPostId = ref<number | null>(null)
+// 正在回复的评论ID（用于嵌套回复）
+const replyingCommentId = ref<number | null>(null)
+```
+
+### Verification
+- `npm run build` 成功完成
+- vue-tsc 编译无错误
+- 生成了生产构建产物到 `dist/`
+
+### 下一步
+- 提交代码并推送到 GitHub
+- 确保 CI/CD 流水线通过
+- 监控生产环境部署是否正常
