@@ -82,9 +82,6 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-
       - name: 配置 SSH
         run: |
           mkdir -p ~/.ssh
@@ -96,9 +93,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<EOF
             set -e
-            DEPLOY_DIR="/root"
-            mkdir -p "$DEPLOY_DIR"
-            cd "$DEPLOY_DIR"
+            cd /root
             podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-backend:latest
             podman kube play -f backend-pod.yaml
             podman pull ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:latest
