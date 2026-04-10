@@ -146,8 +146,8 @@
 - ✅ 编写 PostService 单元测试 (13 个用例, 语句覆盖率 98.3%)
 - ✅ 编写 CommentService 单元测试 (9 个用例, 语句覆盖率 >95%)
 - ✅ 编写 UserService 单元测试 (9 个用例, 语句覆盖率 86.2%)
-- ⬜ 搭建前端测试框架 (Vitest + Vue Test Utils)
-- ⬜ 编写 Forum.vue 组件测试 (标签选择、发帖、回复)
+- ✅ 搭建前端测试框架 (Vitest + Vue Test Utils)
+- ✅ 编写 Forum.vue 组件测试 (4 个用例, 覆盖头部、列表、标签筛选)
 - ⬜ 配置 CI/CD (GitHub Actions) 在 push 时运行测试
 - ⬜ 强制覆盖率阈值 (核心 >80%)
 - ⬜ 添加 pre-commit hooks 运行测试
