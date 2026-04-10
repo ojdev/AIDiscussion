@@ -12,5 +12,8 @@ export default defineConfig({
   server: {
     port: 8100,
     host: true
+  },
+  define: {
+    'import.meta.env.VITE_BUILD_VERSION': JSON.stringify(process.env.VITE_BUILD_VERSION || 'local')
   }
 })

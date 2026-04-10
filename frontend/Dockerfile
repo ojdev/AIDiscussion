@@ -7,6 +7,8 @@ COPY package*.json ./
 RUN npm install --no-audit --no-fund
 
 COPY . .
+ARG VITE_BUILD_VERSION
+ENV VITE_BUILD_VERSION=${VITE_BUILD_VERSION}
 RUN npm run build
 
 # Production stage

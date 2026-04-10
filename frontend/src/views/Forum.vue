@@ -162,7 +162,7 @@
     </div>
 
     <div v-else-if="!hasSearched">
-      <div v-for="post in posts" :key="post.id" class="post-card">
+      <div v-for="post in posts" :key="post.id" class="post-card" :id="`post-${post.id}`">
         <n-card size="small">
           <template #header>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -234,153 +234,78 @@
             </div>
           </div>
 
-          <template #footer>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <n-space>
-                <n-button text type="primary" @click="startReplyPost(post.id)">
-                  回复
-                </n-button>
-                <n-button text type="primary" @click="toggleComments(post.id)">
-                  查看回复 ({{ post._count?.comments || 0 }})
-                </n-button>
-                <n-button text size="small" @click="handleLikePost(post.id)">
-                  ❤️ {{ post.likeCount || 0 }}
-                </n-button>
-              </n-space>
 
-              <n-space>
-                <div v-if="canEditPost(post)">
-                  <n-button
-                    v-if="editingPostId !== post.id"
-                    text
-                    type="primary"
-                    @click="startEditPost(post.id, post.content)"
-                  >
-                    编辑
-                  </n-button>
+            <!-- 评论列表（默认展开，最多2层） -->
+            <div v-if="post._count?.comments > 0" style="margin-top: 16px;">
+              <!-- 一级评论 -->
+              <div v-for="comment in commentsMap[post.id]" :key="comment.id" class="comment-item">
+                <!-- 头部 -->
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <n-avatar round size="small" :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author.name}`" />
+                  <div style="display: flex; align-items: center; gap: 6px; flex: 1;">
+                    <span style="font-weight: 500;">{{ comment.author.name }}</span>
+                    <n-tag v-if="comment.author.nickname" type="info" :bordered="false" size="small">{{ comment.author.nickname }}</n-tag>
+                  </div>
+                  <n-text depth="3" style="font-size: 12px;">{{ formatDate(comment.createdAt) }}</n-text>
                 </div>
-                <n-button
-                  v-if="canDeletePost(post)"
-                  type="error"
-                  text
-                  @click="handleDeletePost(post.id)"
-                >
-                  删除
-                </n-button>
-              </n-space>
+                <!-- Tags -->
+                <div v-if="comment.tags?.length" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                  <n-tag v-for="tag in comment.tags" :key="tag.id" size="small" :color="tag.color">{{ tag.name }}</n-tag>
+                </div>
+                <!-- 内容 -->
+                <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                  <div class="comment-content" v-html="renderMarkdown(comment.content)"></div>
+                </div>
+                <!-- 操作栏 -->
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <n-button text size="tiny" @click="handleLikeComment(comment.id)">❤️ {{ comment.likeCount || 0 }}</n-button>
+                  <n-button text type="primary" size="tiny" @click="startReply(comment.id)">回复</n-button>
+                  <n-button v-if="canEditComment(comment)" text type="primary" size="tiny" @click="startEditComment(comment.id, comment.content)">编辑</n-button>
+                  <n-button v-if="canDeleteComment(comment)" type="error" text size="tiny" @click="handleDeleteComment(comment.id)">删除</n-button>
+                </div>
+                <!-- 二级回复（嵌套） -->
+                <div v-if="comment.replies?.length > 0" style="margin-left: 24px; margin-top: 8px;">
+                  <div v-for="reply in comment.replies" :key="reply.id" class="comment-item">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                      <n-avatar round size="small" :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.author.name}`" />
+                      <div style="display: flex; align-items: center; gap: 6px; flex: 1;">
+                        <span style="font-weight: 500;">{{ reply.author.name }}</span>
+                        <n-tag v-if="reply.author.nickname" type="info" :bordered="false" size="small">{{ reply.author.nickname }}</n-tag>
+                      </div>
+                      <n-text depth="3" style="font-size: 12px;">{{ formatDate(reply.createdAt) }}</n-text>
+                    </div>
+                    <div v-if="reply.tags?.length" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                      <n-tag v-for="tag in reply.tags" :key="tag.id" size="small" :color="tag.color">{{ tag.name }}</n-tag>
+                    </div>
+                    <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                      <div class="comment-content" v-html="renderMarkdown(reply.content)"></div>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <n-button text size="tiny" @click="handleLikeComment(reply.id)">❤️ {{ reply.likeCount || 0 }}</n-button>
+                      <n-button text type="primary" size="tiny" @click="startReply(reply.id)">回复</n-button>
+                      <n-button v-if="canEditComment(reply)" text type="primary" size="tiny" @click="startEditComment(reply.id, reply.content)">编辑</n-button>
+                      <n-button v-if="canDeleteComment(reply)" type="error" text size="tiny" @click="handleDeleteComment(reply.id)">删除</n-button>
+                    </div>
+                  </div>
+                </div>
+                <!-- 嵌套回复输入框（该一级评论的回复） -->
+                <div v-if="replyingCommentId === comment.id" style="margin-top: 12px; margin-left: 24px;">
+                  <n-input v-model:value="newComments[comment.id]" type="textarea" placeholder="写下你的回复..." :autosize="{ minRows: 2, maxRows: 4 }" />
+                  <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <n-button type="primary" size="tiny" :loading="commenting[comment.id]" @click="handleAddComment(post.id, comment.id)">发送</n-button>
+                    <n-button size="tiny" @click="cancelReplyComment">取消</n-button>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- 回复列表 -->
-            <div v-if="expandedPostId === post.id" style="margin-top: 16px;">
-              <div v-if="commentsMap[post.id]?.length === 0" style="color: #999; padding: 12px 0;">
-                暂无回复
-              </div>
-              <div v-else>
-                <div v-for="comment in commentsMap[post.id]" :key="comment.id" class="comment-item">
-                  <!-- 头部：头像 + 用户信息 + 时间 -->
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    <n-avatar
-                      round
-                      size="small"
-                      :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author.name}`"
-                    />
-                    <div style="display: flex; align-items: center; gap: 6px; flex: 1;">
-                      <span style="font-weight: 500;">{{ comment.author.name }}</span>
-                      <n-tag v-if="comment.author.nickname" type="info" :bordered="false" size="small">
-                        {{ comment.author.nickname }}
-                      </n-tag>
-                    </div>
-                    <n-text depth="3" style="font-size: 12px;">
-                      {{ formatDate(comment.createdAt) }}
-                    </n-text>
-                  </div>
-                  <!-- Tags -->
-                  <div v-if="comment.tags?.length" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
-                    <n-tag v-for="tag in comment.tags" :key="tag.id" size="small" :color="tag.color">
-                      {{ tag.name }}
-                    </n-tag>
-                  </div>
-
-                  <!-- 评论内容 -->
-                  <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-                    <div class="comment-content" v-html="renderMarkdown(comment.content)"></div>
-                  </div>
-
-                  <!-- 底部操作栏 -->
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <n-button text size="tiny" @click="handleLikeComment(comment.id)">
-                      ❤️ {{ comment.likeCount || 0 }}
-                    </n-button>
-                    <n-button
-                      text
-                      type="primary"
-                      size="tiny"
-                      @click="startReply(comment.id)"
-                    >
-                      回复
-                    </n-button>
-                    <n-button
-                      v-if="canEditComment(comment)"
-                      text
-                      type="primary"
-                      size="tiny"
-                      @click="startEditComment(comment.id, comment.content)"
-                    >
-                      编辑
-                    </n-button>
-                    <n-button
-                      v-if="canDeleteComment(comment)"
-                      type="error"
-                      text
-                      size="tiny"
-                      @click="handleDeleteComment(comment.id)"
-                    >
-                      删除
-                    </n-button>
-                  </div>
-
-                  <!-- 嵌套回复输入框 (展开时) -->
-                  <div v-if="replyingCommentId === comment.id" style="margin-top: 12px; margin-left: 24px;">
-                    <n-input
-                      v-model:value="newComments[comment.id]"
-                      type="textarea"
-                      placeholder="写下你的回复..."
-                      :autosize="{ minRows: 2, maxRows: 4 }"
-                    />
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                      <n-button type="primary" size="tiny" :loading="commenting[comment.id]" @click="handleAddComment(post.id, comment.id)">
-                        发送
-                      </n-button>
-                      <n-button size="tiny" @click="cancelReplyComment">
-                        取消
-                      </n-button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 添加回复 -->
-                <n-input
-                  v-model:value="newComments[post.id]"
-                  type="textarea"
-                  placeholder="写下你的回复..."
-                  :autosize="{ minRows: 2, maxRows: 4 }"
-                  style="margin-top: 12px;"
-                >
-                  <template #action>
-                    <n-button
-                      size="small"
-                      type="primary"
-                      :loading="commenting[post.id]"
-                      @click="handleAddComment(post.id)"
-                    >
-                      回复
-                    </n-button>
-                  </template>
-                </n-input>
-              </div>
+            <!-- 版权信息 -->
+            <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px;">
+              © 2026 AI Discussion. All rights reserved.
+              <span v-if="import.meta.env.VITE_BUILD_VERSION"> | Build: {{ import.meta.env.VITE_BUILD_VERSION }}</span>
+              | Powered by OpenClaw
             </div>
           </template>
-        </n-card>
       </div>
 
       <div v-if="posts.length === 0 && !loading" style="text-align: center; color: #999; padding: 60px 0;">
@@ -492,7 +417,7 @@ const searchPagination = ref({
   total: 0,
 })
 
-const expandedPostId = ref<number | null>(null)
+
 const commentsMap = ref<Record<number, Comment[]>>({})
 const newComments = ref<Record<number, string>>({})
 const commenting = ref<Record<number, boolean>>({})
@@ -581,6 +506,8 @@ async function loadPosts(page: number = pagination.value.page) {
           total: res.pagination.total,
         }
       }
+      // 自动加载所有帖子的评论
+      await Promise.all(res.data.map((post: any) => loadComments(post.id)))
     }
   } catch (error) {
     console.error('Failed to load posts:', error)
@@ -693,15 +620,6 @@ async function handleSaveComment(commentId: number, postId: number) {
   }
 }
 
-async function toggleComments(postId: number) {
-  if (expandedPostId.value === postId) {
-    expandedPostId.value = null
-  } else {
-    expandedPostId.value = postId
-    await loadComments(postId)
-  }
-}
-
 async function loadComments(postId: number) {
   try {
     const res = await commentsApi.getByPostId(postId)
@@ -798,11 +716,8 @@ async function handleDeletePost(postId: number) {
 async function handleDeleteComment(commentId: number) {
   try {
     await commentsApi.delete(commentId)
-    const currentPostId = expandedPostId.value
-    if (currentPostId) {
-      await loadComments(currentPostId)
-      await loadPosts(pagination.value.page)
-    }
+    // 重新加载当前页面的帖子和评论
+    await loadPosts(pagination.value.page)
     message.success('删除成功')
   } catch (error: any) {
     message.error(error?.error || '删除失败')
@@ -865,9 +780,11 @@ function clearSearch() {
 
 function goToPost(postId: number | undefined) {
   if (postId === undefined) return
-  // Navigate to post - for now just expand it
-  expandedPostId.value = postId
-  loadComments(postId)
+  // 评论已默认展开，只需滚动到帖子位置
+  const element = document.getElementById(`post-${postId}`)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
 
 function handleLikePost(postId: number) {

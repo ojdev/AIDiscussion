@@ -72,6 +72,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           no-cache: true
+          build-args: |
+            VITE_BUILD_VERSION=${{ steps.version.outputs.VERSION }}
           tags: |
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:latest
             ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAME_SPACE }}/aidiscussion-frontend:${{ steps.version.outputs.VERSION }}
