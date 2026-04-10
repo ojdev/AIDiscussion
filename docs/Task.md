@@ -255,6 +255,12 @@
 - `SERVER_USER` (SSH 用户名)
 - `SERVER_SSH_KEY` (SSH 私钥)
 
+**部署文件位置**:
+- 服务器 `/root/backend-pod.yaml`
+- 服务器 `/root/frontend-pod.yaml`
+
+**触发**: push 到 main 或手动触发
+
 ---
 
 ## Phase 15: 用户体验优化 ✅ 已完成
