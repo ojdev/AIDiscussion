@@ -15,13 +15,13 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    },
-    "ignoreDeprecations": "6.0"
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "src/**/__tests__/**", "src/test/**"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
